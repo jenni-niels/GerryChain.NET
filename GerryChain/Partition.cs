@@ -46,10 +46,12 @@ namespace GerryChain
         /// Create a DualGraph representation for a state given a networkx json representation.
         /// </summary>
         /// <param name="jsonFilePath"> path to networkx json file </param>
+        /// <param name="assignmentColumn"> Column name in the json file that contains the initial assignment </param>
+        /// <param name="populationColumn"> Column name in the json file that contains the population of each node. </param>
         /// <param name="columnsToTract"> names of columns tracts as attributes </param>
         /// <returns> New instance of DualGraph record </returns>
         /// <remarks> Nodes are assumed to be indexed from 0 .. n-1 </remarks>
-        public Partition(string jsonFilePath, string assignmentColumn, string populationColumn, string[] columnsToTract)
+        public Partition(string jsonFilePath, string assignmentColumn, string populationColumn, string[] columnsToTrack)
         {
 
             double[] populations;
@@ -63,7 +65,7 @@ namespace GerryChain
                 populations = (from p in o["nodes"] select (double)p[populationColumn]).ToArray();
                 assignments = (from p in o["nodes"] select (int)p[assignmentColumn]).ToArray();
 
-                foreach (string c in columnsToTract)
+                foreach (string c in columnsToTrack)
                 {
                     attributes[c] = (from p in o["nodes"] select (double)p[c]).ToArray();
                 }
