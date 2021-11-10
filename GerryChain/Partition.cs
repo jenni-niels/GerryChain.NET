@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace GerryChain
@@ -19,25 +18,47 @@ namespace GerryChain
     /// </member>
     public class Partition
     {
-        public DualGraph graph { get; private set; }
-        public int[] assignments { get; private set; }
-        public bool hasParent { get; private set; }
-        public int[] parentAssignments { get; private set; }
+        public DualGraph Graph { get; private set; }
+        public int[] Assignments { get; private set; }
+        public bool HasParent { get; private set; }
+        public int[] ParentAssignments { get; private set; }
 
 
+        /// <summary>
+        /// Generate initial partition on dualgraph.
+        /// </summary>
+        /// <param name="graph"> Underlying Dual Graph </param>
+        /// <param name="assignment"> Partition assignment on nodes of graph. </param>
         public Partition(DualGraph graph, int[] assignment)
         {
-            this.hasParent = false;
-            this.graph = graph;
-            this.assignments = assignment;
+            HasParent = false;
+            Graph = graph;
+            Assignments = assignment;
         }
 
+        /// <summary>
+        /// Create a DualGraph representation for a state given a networkx json representation.
+        /// </summary>
+        /// <param name="jsonFilePath"> path to networkx json file </param>
+        /// <param name="columnsToTract"> names of columns tracts as attributes </param>
+        /// <returns> New instance of DualGraph record </returns>
+        public Partition(string jsonFilePath, string assignmentColumn, string[] columnsToTract)
+        {
+            HasParent = false;
+            Graph = new DualGraph();
+            // Assignments = assignment;
+        }
+
+        /// <summary>
+        /// Generate 
+        /// </summary>
+        /// <param name="proposal"></param>
         public Partition(Proposal proposal)
         {
-            graph = proposal.part.graph;
-            parentAssignments = proposal.part.assignments;
-            hasParent = true;
-            assignments = parentAssignments.Select((district, i) => proposal.flips.ContainsKey(i) ? proposal.flips[i] : district).ToArray();
+            Graph = proposal.Part.Graph;
+            ParentAssignments = proposal.Part.Assignments;
+            HasParent = true;
+            Assignments = ParentAssignments.Select((district, i) => proposal.Flips.ContainsKey(i) ? proposal.Flips[i] : district).ToArray();
         }
 
     }
@@ -48,5 +69,4 @@ namespace GerryChain
         public string Name { get; } = Name;
         public Lazy<double> Value { get; }
     }
-    public record Proposal(Partition part, Dictionary<int, int> flips);
 }
