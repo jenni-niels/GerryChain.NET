@@ -1,5 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.IO;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using QuikGraph;
 
 namespace GerryChain
 {
@@ -42,11 +47,33 @@ namespace GerryChain
         /// <param name="jsonFilePath"> path to networkx json file </param>
         /// <param name="columnsToTract"> names of columns tracts as attributes </param>
         /// <returns> New instance of DualGraph record </returns>
-        public Partition(string jsonFilePath, string assignmentColumn, string[] columnsToTract)
+        /// <remarks> Nodes are assumed to be indexed from 0 .. n-1 </remarks>
+        public Partition(string jsonFilePath, string assignmentColumn, string populationColumn, string[] columnsToTract)
         {
+
+            double[] populations;
+            int[] assignments;
+            IEnumerable<SUndirectedEdge<int>> edges;
+
+            using (StreamReader reader = File.OpenText(jsonFilePath))
+            {
+                JObject o = (JObject)JToken.ReadFrom(new JsonTextReader(reader));
+                populations = (from p in o["nodes"] select (double)p[populationColumn]).ToArray();
+                assignments = (from p in o["nodes"] select (int)p[assignmentColumn]).ToArray();
+
+                /// Nodes are assumed to be indexed from 0 to n-1 and listed in the json file in the order they are indexed.
+                edges = o["adjacency"].SelectMany((x, i) => x.Select(e => new SUndirectedEdge<int>(i, (int)e["id"])));
+            }
+
+            Graph = new DualGraph
+            {
+                Populations = populations,
+                TotalPop = populations.Sum(),
+                Graph = edges.ToUndirectedGraph<int, SUndirectedEdge<int>>()
+            };
             HasParent = false;
-            Graph = new DualGraph();
-            // Assignments = assignment;
+            /// Assignment column must be 0 or 1 indexed.
+            Assignments = (assignments.Min() == 1) ? assignments.Select(d => d - 1).ToArray() : assignments;
         }
 
         /// <summary>

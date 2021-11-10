@@ -3,7 +3,6 @@ using System.Linq;
 using System.Collections.Immutable;
 using System.Collections.Generic;
 using QuikGraph;
-using System.Json;
 
 namespace GerryChain
 {
@@ -20,8 +19,6 @@ namespace GerryChain
         public UndirectedGraph<int, SUndirectedEdge<int>> Graph { get; init; }
         public double[] Populations { get; init; }
         public ImmutableDictionary<string, double[]> Attributes { get; init; }
-
-        
 
         /// <summary>
         /// Create Toy Grid Graph.  Used Primarily for testing.
