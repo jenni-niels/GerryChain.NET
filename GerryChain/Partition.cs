@@ -27,6 +27,8 @@ namespace GerryChain
         public DualGraph Graph { get; private set; }
         public int[] Assignments { get; private set; }
         public bool HasParent { get; private set; }
+        
+        public int NumDistricts { get; private set; }
         public int[] ParentAssignments { get; private set; }
 
 
@@ -48,7 +50,7 @@ namespace GerryChain
         /// <param name="jsonFilePath"> path to networkx json file </param>
         /// <param name="assignmentColumn"> Column name in the json file that contains the initial assignment </param>
         /// <param name="populationColumn"> Column name in the json file that contains the population of each node. </param>
-        /// <param name="columnsToTract"> names of columns tracts as attributes </param>
+        /// <param name="columnsToTrack"> names of columns tracts as attributes </param>
         /// <returns> New instance of DualGraph record </returns>
         /// <remarks> Nodes are assumed to be indexed from 0 .. n-1 </remarks>
         public Partition(string jsonFilePath, string assignmentColumn, string populationColumn, string[] columnsToTrack)
@@ -74,6 +76,8 @@ namespace GerryChain
                 edges = o["adjacency"].SelectMany((x, i) => x.Select(e => new SUndirectedEdge<int>(i, (int)e["id"])));
             }
 
+            bool oneIndexed = (assignments.Min() == 1);
+
             Graph = new DualGraph
             {
                 Populations = populations,
@@ -83,7 +87,8 @@ namespace GerryChain
             };
             HasParent = false;
             /// Assignment column must be 0 or 1 indexed.
-            Assignments = (assignments.Min() == 1) ? assignments.Select(d => d - 1).ToArray() : assignments;
+            Assignments = oneIndexed ? assignments.Select(d => d - 1).ToArray() : assignments;
+            NumDistricts = oneIndexed ? assignments.Max() : assignments.Max() + 1;
         }
 
         /// <summary>
