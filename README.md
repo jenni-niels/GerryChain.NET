@@ -14,9 +14,9 @@ A .NET implementation of the ReCom Markov chain for redistricting.  Development 
 * Add Optimization chain class
     * Objective function representation.
     * Short Bursts
-    * Modified Hill
+    * Modified Hill Climbing
 
 
-## Future Goals
+## Future Goal
 * Nuget Package
-* Parallelization of ReCom sampling and optimzation
+* Parallelization of ReCom sampling and optimization

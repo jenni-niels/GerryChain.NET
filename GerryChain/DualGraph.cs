@@ -1,6 +1,7 @@
 ﻿// using System;
 using System.Linq;
 using System.Collections.Immutable;
+using System.Collections.Generic;
 using QuikGraph;
 using System.Json;
 
@@ -16,8 +17,7 @@ namespace GerryChain
     {
 
         public double TotalPop { get; init; }
-        // public Edge[] Edges { get; init; }
-        public UndirectedGraph<int, SUndirectedEdge<int>> graph {get; init;}
+        public UndirectedGraph<int, SUndirectedEdge<int>> Graph {get; init;}
         public double[] Populations {get; init;}
         public ImmutableDictionary<string, double[]> Attributes {get; init;}
         
@@ -25,28 +25,40 @@ namespace GerryChain
             return new DualGraph();
         }
 
-        public DualGraph GridGraph(uint n, uint m, double[] Populations){
-            var totalPop = Populations.Sum();
+        public static DualGraph GridGraph(int n, int m){
+            var edges = new List<SUndirectedEdge<int>>();
+            for (int col = 0; col < n; col++) {
+                for (int row = col; row < m; row++) {
+                    int i = (col * m) + row;
+                    if (col > 0) {
+                        int westNeighbor = ((col - 1) * m) + row;
+                        edges.Add(new SUndirectedEdge<int>(i, westNeighbor));
+                    }
+                    if (col < n - 1) {
+                        int eastNeighbor = ((col + 1) * m) + row;
+                        edges.Add(new SUndirectedEdge<int>(i, eastNeighbor));
+                    }
+                    if (row > 0) {
+                        int southNeighbor = (col * m) + (row - 1);
+                        edges.Add(new SUndirectedEdge<int>(i, southNeighbor));
+                    }
+                    if (row < m - 1) {
+                        int northNeighbor = (col * m) + (row + 1);
+                        edges.Add(new SUndirectedEdge<int>(i, northNeighbor));
+                    }
+                }
+            }
+            var graph = edges.ToUndirectedGraph <int, SUndirectedEdge<int>>();
+            var totalPop = n * m;
+            var pops = Enumerable.Repeat<double>(1.0, n*m).ToArray();
 
 
             return new DualGraph { TotalPop = totalPop,
-                                   Populations = Populations };
+                                   Graph = graph,
+                                   Populations = pops};
         }
 
     };
 
-    /// <summary>
-    /// Represents an edge of the graph between two units.
-    /// </summary>
-    /// <param name="u">
-    /// The id of the first node
-    /// </param>
-    /// <param name="v">
-    /// The id of the second node
-    /// </param>
-    /// <remarks>
-    /// u <= v
-    /// </remarks>
-    public record Edge(uint u, uint v);
 }
 
