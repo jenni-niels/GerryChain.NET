@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Immutable;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
@@ -54,12 +55,18 @@ namespace GerryChain
             double[] populations;
             int[] assignments;
             IEnumerable<SUndirectedEdge<int>> edges;
+            var attributes = new Dictionary<string, double[]>();
 
             using (StreamReader reader = File.OpenText(jsonFilePath))
             {
                 JObject o = (JObject)JToken.ReadFrom(new JsonTextReader(reader));
                 populations = (from p in o["nodes"] select (double)p[populationColumn]).ToArray();
                 assignments = (from p in o["nodes"] select (int)p[assignmentColumn]).ToArray();
+
+                foreach (string c in columnsToTract)
+                {
+                    attributes[c] = (from p in o["nodes"] select (double)p[c]).ToArray();
+                }
 
                 /// Nodes are assumed to be indexed from 0 to n-1 and listed in the json file in the order they are indexed.
                 edges = o["adjacency"].SelectMany((x, i) => x.Select(e => new SUndirectedEdge<int>(i, (int)e["id"])));
@@ -69,7 +76,8 @@ namespace GerryChain
             {
                 Populations = populations,
                 TotalPop = populations.Sum(),
-                Graph = edges.ToUndirectedGraph<int, SUndirectedEdge<int>>()
+                Graph = edges.ToUndirectedGraph<int, SUndirectedEdge<int>>(),
+                Attributes = attributes.ToImmutableDictionary()
             };
             HasParent = false;
             /// Assignment column must be 0 or 1 indexed.
