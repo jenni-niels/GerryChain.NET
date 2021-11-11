@@ -3,10 +3,11 @@
 A .NET implementation of the ReCom Markov chain for redistricting.  Development goals are fast heuristic optimization 
 
 ## TODO::
-* Lazy evaluated score on Partition objects
-* Decision on using Quikgraph or "homebrewed" immutable graph representation?
-* Add grid graph toy example
-* Add unit test for initial graph representation
+* ~~Lazy evaluated score on Partition objects~~
+* ~~Decision on using Quikgraph or "homebrewed" immutable graph representation?~~ - Using Quikgraph
+* ~~Add grid graph toy example~~
+* ~~Add unit test for initial graph representation~~
+* ~~Add json Parser for networkx format~~
 
 * Add Chain class
     * ReCom step function (with parallelized proposal generation)
