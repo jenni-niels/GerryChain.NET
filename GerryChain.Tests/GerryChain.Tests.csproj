@@ -26,5 +26,8 @@
   <ItemGroup>
     <ProjectReference Include="..\GerryChain\GerryChain.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\resources\al_vtds20_with_seeds.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 
 </Project>

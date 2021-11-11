@@ -68,7 +68,16 @@ namespace GerryChain
                 Populations = pops
             };
         }
-
+        /// <summary>
+        /// Generate Subgraph view of Graph instance from the passed nodes.
+        /// </summary>
+        /// <param name="nodes">The nodes that define the subgraph</param>
+        /// <returns> New UndirectedGraph instance. </returns>
+        public UndirectedGraph<int, SUndirectedEdge<int>> SubGraph(IEnumerable<int> nodes) {
+            var subgraph = new UndirectedGraph<int, SUndirectedEdge<int>>();
+            /// TODO:: Build Subgraph from graph.
+            return subgraph;
+        }
     }
 }
 

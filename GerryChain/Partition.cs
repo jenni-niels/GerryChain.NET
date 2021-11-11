@@ -27,21 +27,23 @@ namespace GerryChain
         public DualGraph Graph { get; private set; }
         public int[] Assignments { get; private set; }
         public bool HasParent { get; private set; }
-        
         public int NumDistricts { get; private set; }
         public int[] ParentAssignments { get; private set; }
-
+        private Dictionary<string, Score> ScoreFunctions { get; set; }
+        private Dictionary<string, ScoreValue> ScoreValues { get; set; }
 
         /// <summary>
         /// Generate initial partition on dualgraph.
         /// </summary>
         /// <param name="graph"> Underlying Dual Graph </param>
         /// <param name="assignment"> Partition assignment on nodes of graph. </param>
-        public Partition(DualGraph graph, int[] assignment)
+        public Partition(DualGraph graph, int[] assignment, IEnumerable<Score> Scores)
         {
             HasParent = false;
             Graph = graph;
             Assignments = assignment;
+            ScoreFunctions = Scores.ToDictionary(s => s.Name);
+            ScoreValues = new Dictionary<string, ScoreValue>();
         }
 
         /// <summary>
@@ -53,7 +55,7 @@ namespace GerryChain
         /// <param name="columnsToTrack"> names of columns tracts as attributes </param>
         /// <returns> New instance of DualGraph record </returns>
         /// <remarks> Nodes are assumed to be indexed from 0 .. n-1 </remarks>
-        public Partition(string jsonFilePath, string assignmentColumn, string populationColumn, string[] columnsToTrack)
+        public Partition(string jsonFilePath, string assignmentColumn, string populationColumn, string[] columnsToTrack, IEnumerable<Score> Scores)
         {
 
             double[] populations;
@@ -89,6 +91,8 @@ namespace GerryChain
             /// Assignment column must be 0 or 1 indexed.
             Assignments = oneIndexed ? assignments.Select(d => d - 1).ToArray() : assignments;
             NumDistricts = oneIndexed ? assignments.Max() : assignments.Max() + 1;
+            ScoreFunctions = Scores.ToDictionary(s => s.Name);
+            ScoreValues = new Dictionary<string, ScoreValue>();
         }
 
         /// <summary>
@@ -98,17 +102,48 @@ namespace GerryChain
         public Partition(Proposal proposal)
         {
             Graph = proposal.Part.Graph;
+            ScoreFunctions = proposal.Part.ScoreFunctions;
+            ScoreValues = new Dictionary<string, ScoreValue>();
             ParentAssignments = proposal.Part.Assignments;
             HasParent = true;
             Assignments = ParentAssignments.Select((district, i) => proposal.Flips.ContainsKey(i) ? proposal.Flips[i] : district).ToArray();
         }
+        
+        public ScoreValue Score(string Name)
+        {
+            if (ScoreValues.ContainsKey(Name))
+            {
+                return ScoreValues[Name];
+            }
+            else if (ScoreFunctions.ContainsKey(Name))
+            {
+                ScoreValue result = ScoreFunctions[Name].Func(this);
+                ScoreValues[Name] = result;
+                return result;
+            }
+            else 
+            {
+                throw new ArgumentException("Passed Score is not defined", Name);
+            }
+        }
 
+        public static Score Tally(string name, string column)
+        {
+            Func<Partition, DistrictWideScoreValue> districtTally = Partition =>
+            {
+                double[] districtSums = Enumerable.Range(0, Partition.NumDistricts).Select(d => Partition.Graph.Attributes[column].Where((v,i) => Partition.Assignments[i] == d).Sum()).ToArray();
+
+                return new DistrictWideScoreValue(districtSums);
+            };
+            return new Score(name, districtTally);
+        }
     }
 
-    /// TODO:: add Lazy evaluated scores on a partition
-    public record PlanScore(string Name)
-    {
-        public string Name { get; } = Name;
-        public Lazy<double> Value { get; }
-    }
+    public abstract record ScoreValue();
+    public record PlanWideScoreValue(double Value)
+        : ScoreValue();
+    public record DistrictWideScoreValue(double[] Value)
+        : ScoreValue();
+
+    public record Score(string Name, Func<Partition, ScoreValue> Func);
 }
