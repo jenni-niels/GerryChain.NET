@@ -50,7 +50,8 @@ namespace GerryChain
         /// Create a DualGraph representation for a state given a networkx json representation.
         /// </summary>
         /// <param name="jsonFilePath"> path to networkx json file </param>
-        /// <param name="assignmentColumn"> Column name in the json file that contains the initial assignment </param>
+        /// <param name="assignmentColumn"> Column name in the json file that contains the initial
+        /// assignment.  The values of the assignment column must be 0 or 1 indexed.</param>
         /// <param name="populationColumn"> Column name in the json file that contains the population of each node. </param>
         /// <param name="columnsToTrack"> names of columns tracts as attributes </param>
         /// <returns> New instance of DualGraph record </returns>
@@ -96,9 +97,9 @@ namespace GerryChain
         }
 
         /// <summary>
-        /// Generate 
+        /// Generate a child partition from a proposal.
         /// </summary>
-        /// <param name="proposal"></param>
+        /// <param name="proposal">Proposal defining child partition. </param>
         public Partition(Proposal proposal)
         {
             Graph = proposal.Partition.Graph;
@@ -108,13 +109,23 @@ namespace GerryChain
             HasParent = true;
             Assignments = ParentAssignments.Select((district, i) => proposal.Flips.ContainsKey(i) ? proposal.Flips[i] : district).ToArray();
         }
+
+        /// <summary>
+        /// Generate Subgraph view of the graph for the passed districts
+        /// </summary>
+        /// <param name="districts">The two districts to generate the subgraph of </param>
+        /// <returns> New UndirectedGraph instance. </returns>
+        public UndirectedGraph<int, SUndirectedEdge<int>> DistrictSubGraph(HashSet<int> districts) {
+            IEnumerable<SUndirectedEdge<int>> subgraphEdges = Graph.Graph.Edges.Where(e => districts.Contains(Assignments[e.Source]) && districts.Contains(Assignments[e.Target]));
+            return subgraphEdges.ToUndirectedGraph<int, SUndirectedEdge<int>>();
+        }
         
         /// <summary>
-        /// 
+        /// Scores the partition on a metric
         /// </summary>
-        /// <param name="Name"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentException"></exception>
+        /// <param name="Name">Name of the score to compute</param>
+        /// <returns>ScoreValue for the partition</returns>
+        /// <exception cref="ArgumentException">Thrown if the score name is unknown</exception>
         public ScoreValue Score(string Name)
         {
             if (ScoreValues.TryGetValue(Name, out ScoreValue value))
@@ -132,33 +143,5 @@ namespace GerryChain
                 throw new ArgumentException("Passed Score is not defined", Name);
             }
         }
-
-        /// <summary>
-        /// Factory method for a specially type of common score.
-        /// </summary>
-        /// <param name="name"></param>
-        /// <param name="column"></param>
-        /// <returns></returns>
-        /// Potential move to method in Score
-        public static Score TallyFactory(string name, string column)
-        {
-            Func<Partition, DistrictWideScoreValue> districtTally = Partition =>
-            {
-                double[] districtSums = Enumerable.Range(0, Partition.NumDistricts)
-                                                  .Select(d => Partition.Graph.Attributes[column].Where((v,i) => Partition.Assignments[i] == d).Sum())
-                                                  .ToArray();
-
-                return new DistrictWideScoreValue(districtSums);
-            };
-            return new Score(name, districtTally);
-        }
     }
-
-    public abstract record ScoreValue();
-    public record PlanWideScoreValue(double Value)
-        : ScoreValue();
-    public record DistrictWideScoreValue(double[] Value)
-        : ScoreValue();
-
-    public record Score(string Name, Func<Partition, ScoreValue> Func);
 }
