@@ -30,7 +30,9 @@ namespace GerryChain
         public int NumDistricts { get; private set; }
         public int[] ParentAssignments { get; private set; }
 
-        public IEnumerable<SUndirectedEdge<int>> CutEdges { get; private set; }
+        public int SelfLoops { get; private set; } = 0;
+
+        public IEnumerable<IUndirectedEdge<int>> CutEdges { get; private set; }
 
         private Dictionary<string, Score> ScoreFunctions { get; set; }
         private Dictionary<string, ScoreValue> ScoreValues { get; set; }
@@ -65,7 +67,7 @@ namespace GerryChain
 
             double[] populations;
             int[] assignments;
-            IEnumerable<SUndirectedEdge<int>> edges;
+            IEnumerable<IUndirectedEdge<int>> edges;
             var attributes = new Dictionary<string, double[]>();
 
             using (StreamReader reader = File.OpenText(jsonFilePath))
@@ -80,7 +82,7 @@ namespace GerryChain
                 }
 
                 /// Nodes are assumed to be indexed from 0 to n-1 and listed in the json file in the order they are indexed.
-                edges = o["adjacency"].SelectMany((x, i) => x.Select(e => new SUndirectedEdge<int>(i, (int)e["id"])));
+                edges = o["adjacency"].SelectMany((x, i) => x.Select(e => (IUndirectedEdge<int>) new SUndirectedEdge<int>(i, (int)e["id"])));
             }
 
             bool oneIndexed = (assignments.Min() == 1);
@@ -89,7 +91,7 @@ namespace GerryChain
             {
                 Populations = populations,
                 TotalPop = populations.Sum(),
-                Graph = edges.ToUndirectedGraph<int, SUndirectedEdge<int>>(),
+                Graph = edges.ToUndirectedGraph<int, IUndirectedEdge<int>>(),
                 Attributes = attributes.ToImmutableDictionary()
             };
             HasParent = false;
@@ -116,14 +118,20 @@ namespace GerryChain
             CutEdges = Graph.Graph.Edges.Where(e => Assignments[e.Source] != Assignments[e.Target]);
         }
 
+        public Partition TakeSelfLoop()
+        {
+            SelfLoops++;
+            return this;
+        }
+
         /// <summary>
         /// Generate Subgraph view of the graph for the passed districts
         /// </summary>
         /// <param name="districts">The two districts to generate the subgraph of </param>
         /// <returns> New UndirectedGraph instance. </returns>
-        public UndirectedGraph<int, SUndirectedEdge<int>> DistrictSubGraph(HashSet<int> districts) {
-            IEnumerable<SUndirectedEdge<int>> subgraphEdges = Graph.Graph.Edges.Where(e => districts.Contains(Assignments[e.Source]) && districts.Contains(Assignments[e.Target]));
-            return subgraphEdges.ToUndirectedGraph<int, SUndirectedEdge<int>>();
+        public UndirectedGraph<int, IUndirectedEdge<int>> DistrictSubGraph(HashSet<int> districts) {
+            IEnumerable<IUndirectedEdge<int>> subgraphEdges = Graph.Graph.Edges.Where(e => districts.Contains(Assignments[e.Source]) && districts.Contains(Assignments[e.Target]));
+            return subgraphEdges.ToUndirectedGraph<int, IUndirectedEdge<int>>();
         }
         
         /// <summary>

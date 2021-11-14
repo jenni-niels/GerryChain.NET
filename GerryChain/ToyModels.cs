@@ -18,7 +18,7 @@ namespace GerryChainExtensions
         /// TODO:: Add more options to the populations
         public static DualGraph GridGraph(int n, int m)
         {
-            var edges = new List<SUndirectedEdge<int>>();
+            var edges = new List<IUndirectedEdge<int>>();
             for (int col = 0; col < n; col++)
             {
                 for (int row = col; row < m; row++)
@@ -46,7 +46,7 @@ namespace GerryChainExtensions
                     }
                 }
             }
-            var graph = edges.ToUndirectedGraph<int, SUndirectedEdge<int>>();
+            var graph = edges.ToUndirectedGraph<int, IUndirectedEdge<int>>();
             var totalPop = n * m;
             var pops = Enumerable.Repeat<double>(1.0, n * m).ToArray();
 
