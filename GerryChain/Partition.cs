@@ -66,12 +66,12 @@ namespace GerryChain
             using (StreamReader reader = File.OpenText(jsonFilePath))
             {
                 JObject o = (JObject)JToken.ReadFrom(new JsonTextReader(reader));
-                populations = (from p in o["nodes"] select (double)p[populationColumn]).ToArray();
-                assignments = (from p in o["nodes"] select (int)p[assignmentColumn]).ToArray();
+                populations = (from n in o["nodes"] select (double)n[populationColumn]).ToArray();
+                assignments = (from n in o["nodes"] select (int)n[assignmentColumn]).ToArray();
 
                 foreach (string c in columnsToTrack)
                 {
-                    attributes[c] = (from p in o["nodes"] select (double)p[c]).ToArray();
+                    attributes[c] = (from n in o["nodes"] select (double)n[c]).ToArray();
                 }
 
                 /// Nodes are assumed to be indexed from 0 to n-1 and listed in the json file in the order they are indexed.
@@ -101,23 +101,29 @@ namespace GerryChain
         /// <param name="proposal"></param>
         public Partition(Proposal proposal)
         {
-            Graph = proposal.Part.Graph;
-            ScoreFunctions = proposal.Part.ScoreFunctions;
+            Graph = proposal.Partition.Graph;
+            ScoreFunctions = proposal.Partition.ScoreFunctions;
             ScoreValues = new Dictionary<string, ScoreValue>();
-            ParentAssignments = proposal.Part.Assignments;
+            ParentAssignments = proposal.Partition.Assignments;
             HasParent = true;
             Assignments = ParentAssignments.Select((district, i) => proposal.Flips.ContainsKey(i) ? proposal.Flips[i] : district).ToArray();
         }
         
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="Name"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
         public ScoreValue Score(string Name)
         {
-            if (ScoreValues.ContainsKey(Name))
+            if (ScoreValues.TryGetValue(Name, out ScoreValue value))
             {
-                return ScoreValues[Name];
+                return value;
             }
-            else if (ScoreFunctions.ContainsKey(Name))
+            else if (ScoreFunctions.TryGetValue(Name, out Score score))
             {
-                ScoreValue result = ScoreFunctions[Name].Func(this);
+                ScoreValue result = score.Func(this);
                 ScoreValues[Name] = result;
                 return result;
             }
@@ -127,11 +133,20 @@ namespace GerryChain
             }
         }
 
-        public static Score Tally(string name, string column)
+        /// <summary>
+        /// Factory method for a specially type of common score.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="column"></param>
+        /// <returns></returns>
+        /// Potential move to method in Score
+        public static Score TallyFactory(string name, string column)
         {
             Func<Partition, DistrictWideScoreValue> districtTally = Partition =>
             {
-                double[] districtSums = Enumerable.Range(0, Partition.NumDistricts).Select(d => Partition.Graph.Attributes[column].Where((v,i) => Partition.Assignments[i] == d).Sum()).ToArray();
+                double[] districtSums = Enumerable.Range(0, Partition.NumDistricts)
+                                                  .Select(d => Partition.Graph.Attributes[column].Where((v,i) => Partition.Assignments[i] == d).Sum())
+                                                  .ToArray();
 
                 return new DistrictWideScoreValue(districtSums);
             };
