@@ -29,6 +29,9 @@ namespace GerryChain
         public bool HasParent { get; private set; }
         public int NumDistricts { get; private set; }
         public int[] ParentAssignments { get; private set; }
+
+        public IEnumerable<SUndirectedEdge<int>> CutEdges { get; private set; }
+
         private Dictionary<string, Score> ScoreFunctions { get; set; }
         private Dictionary<string, ScoreValue> ScoreValues { get; set; }
 
@@ -44,6 +47,7 @@ namespace GerryChain
             Assignments = assignment;
             ScoreFunctions = Scores.ToDictionary(s => s.Name);
             ScoreValues = new Dictionary<string, ScoreValue>();
+            CutEdges = Graph.Graph.Edges.Where(e => Assignments[e.Source] != Assignments[e.Target]);
         }
 
         /// <summary>
@@ -94,6 +98,7 @@ namespace GerryChain
             NumDistricts = oneIndexed ? assignments.Max() : assignments.Max() + 1;
             ScoreFunctions = Scores.ToDictionary(s => s.Name);
             ScoreValues = new Dictionary<string, ScoreValue>();
+            CutEdges = Graph.Graph.Edges.Where(e => Assignments[e.Source] != Assignments[e.Target]);
         }
 
         /// <summary>
@@ -108,6 +113,7 @@ namespace GerryChain
             ParentAssignments = proposal.Partition.Assignments;
             HasParent = true;
             Assignments = ParentAssignments.Select((district, i) => proposal.Flips.ContainsKey(i) ? proposal.Flips[i] : district).ToArray();
+            CutEdges = Graph.Graph.Edges.Where(e => Assignments[e.Source] != Assignments[e.Target]);
         }
 
         /// <summary>

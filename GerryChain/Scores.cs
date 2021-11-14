@@ -35,5 +35,14 @@ namespace GerryChain
             };
             return new Score(name, districtTally);
         }
+
+        public static Score NumCutEdgesFactory()
+        {
+            Func<Partition, PlanWideScoreValue> cutEdges = Partition =>
+            {
+                return new PlanWideScoreValue(Partition.CutEdges.Count());
+            };
+            return new Score("NumCutEdges", cutEdges);
+        }
     }
 }
