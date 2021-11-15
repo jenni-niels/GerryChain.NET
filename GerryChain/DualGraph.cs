@@ -12,6 +12,7 @@ namespace GerryChain
     /// <remarks>
     /// Nodes are represented implicitly by indices.
     /// </remarks>
+    /// TODO:: Switch to Tagged Edges To represent which edges cross counties and the edge ids.
     public record DualGraph
     {
         public double TotalPop { get; init; }
