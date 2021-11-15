@@ -32,7 +32,7 @@ namespace GerryChain
         public bool CountyAware { get; private set; }
 
         public ReComChain(Partition initialPartition, int numSteps, double epsilon, int randomSeed = 0,
-                        Func<Partition, double> accept = null, bool countyAware = false, int degreeeOfParallelism = 0,
+                        Func<Partition, double> accept = null, bool countyAware = false, int degreeOfParallelism = 0,
                         int batchSize = 32)
         {
             InitialPartition = initialPartition;
@@ -43,8 +43,8 @@ namespace GerryChain
             AcceptanceFunction = (accept is null) ? _ => 1.0 : accept;
             CountyAware = countyAware;
 
-            if (degreeeOfParallelism < 1) { useDefaultParallelism = true; }
-            else { MaxDegreeOfParallelism = degreeeOfParallelism; }
+            if (degreeOfParallelism < 1) { useDefaultParallelism = true; }
+            else { MaxDegreeOfParallelism = degreeOfParallelism; }
 
             rng = new Random(RngSeed);
             idealPopulation = InitialPartition.Graph.TotalPop / InitialPartition.NumDistricts;
@@ -71,15 +71,15 @@ namespace GerryChain
         /// <returns></returns>
         /// TODO:: add county aware option, where the edges are tagged with whether they cross county
         /// bounds and that 
+        /// TODO:: Debug why all returned proposals are in valid
         private Proposal SampleProposalViaCutEdge(Partition currentPartition, int randomSeed)
         {
             Random generatorRNG = new Random(randomSeed);
             IUndirectedEdge<int> cutedge = currentPartition.CutEdges.ElementAt(generatorRNG.Next(currentPartition.CutEdges.Count()));
-            int[] districts = { cutedge.Source, cutedge.Target };
+            int[] districts = { currentPartition.Assignments[cutedge.Source], currentPartition.Assignments[cutedge.Target] };
             var subgraph = currentPartition.DistrictSubGraph(districts.ToHashSet());
             UndirectedGraph<int, IUndirectedEdge<int>> mst = MST(generatorRNG, subgraph);
 
-            /// TODO:: Balanced edge
             var flips = FindBalancedCut(generatorRNG, mst, (cutedge.Source, cutedge.Target));
 
             return flips is null ? null : new Proposal(currentPartition, (cutedge.Source, cutedge.Target), flips);
@@ -217,7 +217,9 @@ namespace GerryChain
                                                                                      .WithDegreeOfParallelism(chain.MaxDegreeOfParallelism);
 
                     IEnumerable<Proposal> proposals = seeds.Select(i => chain.SampleProposalViaCutEdge(currentPartition, randSeed + i));
+                    // Console.WriteLine(proposals.Count());
                     IEnumerable<Proposal> validProposals = proposals.Where(p => p is not null);
+                    // Console.WriteLine(validProposals.Count());
 
                     currentPartition = validProposals.Count() switch
                     {

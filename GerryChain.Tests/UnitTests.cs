@@ -72,5 +72,26 @@ namespace GerryChain.Tests
             var pops = (DistrictWideScoreValue) p.Score("BVAP");
             Assert.Equal((double) 73218, pops.Value.Min());
         }
+
+        [Fact]
+        public void ReComChainTest1()
+        {
+            var path = new Paths();
+            var filePath = System.IO.Path.Combine(path.executingAssemblyDir, "al_vtds20_with_seeds.json");
+            Partition initPart = new Partition(filePath, "CD_Seed", "TOTPOP", new string[] { }, new Score[] { });
+            var chain = new ReComChain(initPart, 4, 0.05, degreeOfParallelism: 1);
+            Assert.False(chain.ElementAt(0).HasParent);
+        }
+
+        [Fact]
+        public void ReComChainTest2()
+        {
+            var path = new Paths();
+            var filePath = System.IO.Path.Combine(path.executingAssemblyDir, "al_vtds20_with_seeds.json");
+            Partition initPart = new Partition(filePath, "CD_Seed", "TOTPOP", new string[] { }, new Score[] { });
+            var chain = new ReComChain(initPart, 4, 0.05, degreeOfParallelism: 1);
+            var p = chain.ElementAt(1);
+            Assert.True(p.HasParent || p.SelfLoops > 0);
+        }
     }
 }
