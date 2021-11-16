@@ -242,9 +242,9 @@ namespace GerryChain
                 else
                 {
                     int randSeed = rng.Next();
-                    IEnumerable<int> seeds = chain.useDefaultParallelism ? Enumerable.Range(0, chain.BatchSize).AsParallel()
-                                                                         : Enumerable.Range(0, chain.BatchSize).AsParallel()
-                                                                                     .WithDegreeOfParallelism(chain.MaxDegreeOfParallelism);
+                    ParallelQuery<int> seeds = chain.useDefaultParallelism ? Enumerable.Range(0, chain.BatchSize).AsParallel()
+                                                                           : Enumerable.Range(0, chain.BatchSize).AsParallel()
+                                                                                       .WithDegreeOfParallelism(chain.MaxDegreeOfParallelism);
 
                     IEnumerable<ReComProposal> proposals = seeds.Select(i => chain.SampleProposalViaCutEdge(currentPartition, randSeed + i));
                     IEnumerable<ReComProposal> validProposals = proposals.Where(p => p is not null);
