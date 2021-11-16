@@ -2,6 +2,7 @@ using System;
 using Xunit;
 using System.Linq;
 using GerryChainExtensions;
+using GerryChain;
 
 namespace GerryChain.Tests
 {
@@ -40,8 +41,8 @@ namespace GerryChain.Tests
             var path = new Paths();
             var filePath = System.IO.Path.Combine(path.executingAssemblyDir, "al_vtds20_with_seeds.json");
             Partition p = new Partition(filePath, "CD_Seed", "TOTPOP", new string[] { "VAP", "BVAP" }, new Score[] { });
-            int[] districts = { 0, 1 };
-            var subgraph = p.DistrictSubGraph(districts.ToHashSet());
+            (int, int) districts = ( 0, 1 );
+            var subgraph = p.DistrictSubGraph(districts);
             Assert.Equal(395, subgraph.VertexCount);
         }
         /// <summary>
@@ -53,9 +54,9 @@ namespace GerryChain.Tests
             var path = new Paths();
             var filePath = System.IO.Path.Combine(path.executingAssemblyDir, "al_vtds20_with_seeds.json");
             Partition p = new Partition(filePath, "CD_Seed", "TOTPOP", new string[] { "VAP", "BVAP" }, new Score[] { });
-            int[] districts = { 1, 2 };
-            var subgraph = p.DistrictSubGraph(districts.ToHashSet());
-            var numNodes = p.Assignments.Where(x => districts.Contains(x)).Count();
+            (int A, int B) districts = ( 1, 2 );
+            var subgraph = p.DistrictSubGraph(districts);
+            var numNodes = p.Assignments.Where(x => x == districts.A || x == districts.B).Count();
             Assert.Equal(numNodes, subgraph.VertexCount);
         }
 

@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using System.Linq;
 using QuikGraph;
 using QuikGraph.Algorithms.MinimumSpanningTree;
@@ -10,12 +9,27 @@ using QuikGraph.Algorithms.Search;
 
 namespace GerryChain
 {
-    public record Proposal(Partition Partition, (int, int) DistrictsAffected, Dictionary<int, int> Flips);
+    /// <summary>
+    /// Record encoding the information of a ReCom proposal.
+    /// </summary>
+    /// <param name="Partition">Original Partion</param>
+    /// <param name="DistrictsAffected"> The districts that were re-combined </param>
+    /// <param name="Flips">The new district assignment </param>
+    /// <param name="newDistrictPops"> The population of the new districts. </param>
+    public record ReComProposal(Partition Partition, (int A, int B) DistrictsAffected, Dictionary<int, int[]> Flips, (double, double) NewDistrictPops);
+    public record ReComProposalSummary((int A, int B) DistrictsAffected, Dictionary<int, int[]> Flips, (double, double) NewDistrictPops);
+
+
+    /// <summary>
+    /// Class representing a ReCom chain
+    /// </summary>
+    /// <remarks>
+    /// Inherits from IEnumerable<T> to support for each syntax and LINQ methods.
+    /// </remarks>
     public class ReComChain : IEnumerable<Partition>
     {
         public Partition InitialPartition { get; private set; }
         public int RngSeed { get; private set; }
-        private Random rng;
         public int MaxSteps { get; private set; }
         public int MaxDegreeOfParallelism { get; private set; }
         public int BatchSize { get; private set; }
@@ -46,7 +60,6 @@ namespace GerryChain
             if (degreeOfParallelism < 1) { useDefaultParallelism = true; }
             else { MaxDegreeOfParallelism = degreeOfParallelism; }
 
-            rng = new Random(RngSeed);
             idealPopulation = InitialPartition.Graph.TotalPop / InitialPartition.NumDistricts;
             minimumValidPopulation = idealPopulation * (1 - epsilon);
             maximumValidPopulation = idealPopulation * (1 + epsilon);
@@ -71,18 +84,25 @@ namespace GerryChain
         /// <returns></returns>
         /// TODO:: add county aware option, where the edges are tagged with whether they cross county
         /// bounds and that 
-        /// TODO:: Debug why all returned proposals are in valid
-        private Proposal SampleProposalViaCutEdge(Partition currentPartition, int randomSeed)
+        private ReComProposal SampleProposalViaCutEdge(Partition currentPartition, int randomSeed)
         {
             Random generatorRNG = new Random(randomSeed);
             IUndirectedEdge<int> cutedge = currentPartition.CutEdges.ElementAt(generatorRNG.Next(currentPartition.CutEdges.Count()));
-            int[] districts = { currentPartition.Assignments[cutedge.Source], currentPartition.Assignments[cutedge.Target] };
-            var subgraph = currentPartition.DistrictSubGraph(districts.ToHashSet());
+            (int A, int B) districts = (currentPartition.Assignments[cutedge.Source], currentPartition.Assignments[cutedge.Target] );
+            var subgraph = currentPartition.DistrictSubGraph(districts);
+            
             UndirectedGraph<int, IUndirectedEdge<int>> mst = MST(generatorRNG, subgraph);
 
-            var flips = FindBalancedCut(generatorRNG, mst, (cutedge.Source, cutedge.Target));
+            var balancedCut = FindBalancedCut(generatorRNG, mst, districts);
 
-            return flips is null ? null : new Proposal(currentPartition, (cutedge.Source, cutedge.Target), flips);
+            if (balancedCut is (Dictionary<int, int[]> flips, (int A, int B) districtsPops) cut)
+            {
+                return new ReComProposal(currentPartition, districts, cut.flips, cut.districtsPops);
+            }
+            else
+            {
+                return null;
+            }
         }
 
         private UndirectedGraph<int, IUndirectedEdge<int>> MST(Random generatorRNG, UndirectedGraph<int, IUndirectedEdge<int>> subgraph)
@@ -102,9 +122,12 @@ namespace GerryChain
             return edgeRecorder.Edges.ToUndirectedGraph<int, IUndirectedEdge<int>>();
         }
 
-        private bool IsValidPopulation(double population)
+        private bool IsValidPopulation(double population, double totalPopulation)
         {
-            return population >= minimumValidPopulation && population <= maximumValidPopulation;
+            bool validDistrictA = population >= minimumValidPopulation && population <= maximumValidPopulation;
+            double districtBPop = totalPopulation - population;
+            bool validDistrictB = districtBPop >= minimumValidPopulation && districtBPop <= maximumValidPopulation;
+            return validDistrictA && validDistrictB;
         }
 
         /// <summary>
@@ -113,19 +136,21 @@ namespace GerryChain
         /// <param name="mst"></param>
         /// <returns></returns>
         /// TODO:: consider trades of using dictionary as space array vs. a sparsly used array.
-        private Dictionary<int, int> FindBalancedCut(Random generatorRNG, UndirectedGraph<int, IUndirectedEdge<int>> mst, (int, int) districts)
+        private (Dictionary<int, int[]> flips, (int A, int B) districtsPops)? FindBalancedCut(Random generatorRNG, UndirectedGraph<int, IUndirectedEdge<int>> mst, (int A, int B) districts)
         {
             int root = mst.Vertices.First(v => mst.AdjacentDegree(v) > 1);
             var leaves = new Queue<int>(mst.Vertices.Where(v => mst.AdjacentDegree(v) == 1));
 
+            var nodesUniverse = new HashSet<int>(mst.Vertices);
             var nodePaths = mst.Vertices.ToDictionary(v => v,
                                                       v =>
                                                       {
-                                                          var subset = new HashSet<int>();
-                                                          subset.Add(v);
-                                                          return subset;
+                                                          var successors = new HashSet<int>();
+                                                          successors.Add(v);
+                                                          return successors;
                                                       });
             var nodePopulations = mst.Vertices.ToDictionary(v => v, v => InitialPartition.Graph.Populations[v]);
+            double totalPopulation = nodePopulations.Values.Sum();
 
             var bfs = new UndirectedBreadthFirstSearchAlgorithm<int, IUndirectedEdge<int>>(mst);
             var nodePredecessorObserver = new UndirectedVertexPredecessorRecorderObserver<int, IUndirectedEdge<int>>();
@@ -137,9 +162,9 @@ namespace GerryChain
             {
                 int leaf = leaves.Dequeue();
                 double leafPopulation = nodePopulations[leaf];
-                if (IsValidPopulation(leafPopulation))
+                if (IsValidPopulation(leafPopulation, totalPopulation))
                 {
-                    cuts.Append(leaf);
+                    cuts.Add(leaf);
                 }
                 int parent = nodePredecessorObserver.VerticesPredecessors[leaf].GetOtherVertex(leaf);
 
@@ -159,20 +184,16 @@ namespace GerryChain
                 return null;
             }
             int cut = cuts.ElementAt(generatorRNG.Next(cuts.Count));
-            HashSet<int> district1 = nodePaths[cut];
-            HashSet<int> district2 = mst.Vertices.ToHashSet();
-            district2.ExceptWith(district1);
+            double districtAPopulation = nodePopulations[cut];
+            double districtBPopulation = totalPopulation - districtAPopulation;
+            HashSet<int> districtA = nodePaths[cut];
+            HashSet<int> districtB = nodesUniverse;
+            districtB.ExceptWith(districtA);
             
-            var flips = new Dictionary<int, int>();
-            foreach (int node in district1)
-            {
-                flips[node] = districts.Item1;
-            }
-            foreach (int node in district2)
-            {
-                flips[node] = districts.Item2;
-            }
-            return flips;
+            var flips = new Dictionary<int, int[]>();
+            flips[districts.A] = districtA.ToArray();
+            flips[districts.B] = districtB.ToArray();
+            return ((Dictionary<int, int[]> flips, (int A, int B) districtsPops)?) (flips, (districtAPopulation, districtBPopulation));
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -185,17 +206,26 @@ namespace GerryChain
             return new ReComChainEnumerator(this);
         }
 
+        /// <summary>
+        /// Nested sub-class defining the enumeration behavior of the chain and how it selects the
+        /// next partition.
+        /// 
+        /// Only contains fields for the current partition, step, the RNG, and a reference to the
+        /// instance of the outer class.
+        /// </summary>
         public class ReComChainEnumerator : IEnumerator<Partition>
         {
             private ReComChain chain;
             private int step;
             private Partition currentPartition;
+            private Random rng;
 
             public ReComChainEnumerator(ReComChain chainDetails)
             {
                 chain = chainDetails;
                 step = -1;
                 currentPartition = null;
+                rng = new Random(chain.RngSeed);
             }
 
             public bool MoveNext()
@@ -211,26 +241,33 @@ namespace GerryChain
                 }
                 else
                 {
-                    int randSeed = chain.rng.Next();
+                    int randSeed = rng.Next();
                     IEnumerable<int> seeds = chain.useDefaultParallelism ? Enumerable.Range(0, chain.BatchSize).AsParallel()
                                                                          : Enumerable.Range(0, chain.BatchSize).AsParallel()
                                                                                      .WithDegreeOfParallelism(chain.MaxDegreeOfParallelism);
 
-                    IEnumerable<Proposal> proposals = seeds.Select(i => chain.SampleProposalViaCutEdge(currentPartition, randSeed + i));
-                    // Console.WriteLine(proposals.Count());
-                    IEnumerable<Proposal> validProposals = proposals.Where(p => p is not null);
-                    // Console.WriteLine(validProposals.Count());
+                    IEnumerable<ReComProposal> proposals = seeds.Select(i => chain.SampleProposalViaCutEdge(currentPartition, randSeed + i));
+                    IEnumerable<ReComProposal> validProposals = proposals.Where(p => p is not null);
+
+                    // foreach (ReComProposal p in validProposals)
+                    // {
+                    //     Console.WriteLine(p.NewDistrictPops.ToString());
+                    // }
 
                     currentPartition = validProposals.Count() switch
                     {
                         0 => currentPartition.TakeSelfLoop(),
-                        > 0 => new Partition(validProposals.ElementAt(chain.rng.Next(validProposals.Count()))),
+                        > 0 => new Partition(validProposals.ElementAt(rng.Next(validProposals.Count()))),
                         _ => throw new IndexOutOfRangeException("Length of valid proposals should not be negative!")
                     };
                 }
                 return true;
             }
-            public void Reset() { step = -1; }
+            public void Reset()
+            {
+                step = -1;
+                rng = new Random(chain.RngSeed);
+            }
             void IDisposable.Dispose() { }
             public Partition Current
             {

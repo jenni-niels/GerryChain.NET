@@ -29,7 +29,7 @@ namespace GerryChain
         public bool HasParent { get; private set; }
         public int NumDistricts { get; private set; }
         public int[] ParentAssignments { get; private set; }
-
+        public ReComProposalSummary ProposalSummary { get; private set; }
         public int SelfLoops { get; private set; } = 0;
 
         public IEnumerable<IUndirectedEdge<int>> CutEdges { get; private set; }
@@ -46,10 +46,12 @@ namespace GerryChain
         {
             HasParent = false;
             Graph = graph;
-            Assignments = assignment;
             ScoreFunctions = Scores.ToDictionary(s => s.Name);
             ScoreValues = new Dictionary<string, ScoreValue>();
             CutEdges = Graph.Graph.Edges.Where(e => Assignments[e.Source] != Assignments[e.Target]);
+            bool oneIndexed = (assignment.Min() == 1);
+            Assignments = oneIndexed ? assignment.Select(d => d - 1).ToArray() : assignment;
+            NumDistricts = oneIndexed ? assignment.Max() : assignment.Max() + 1;
         }
 
         /// <summary>
@@ -107,15 +109,26 @@ namespace GerryChain
         /// Generate a child partition from a proposal.
         /// </summary>
         /// <param name="proposal">Proposal defining child partition. </param>
-        public Partition(Proposal proposal)
+        public Partition(ReComProposal proposal)
         {
             Graph = proposal.Partition.Graph;
             ScoreFunctions = proposal.Partition.ScoreFunctions;
             ScoreValues = new Dictionary<string, ScoreValue>();
             ParentAssignments = proposal.Partition.Assignments;
+            NumDistricts = proposal.Partition.NumDistricts;
             HasParent = true;
-            Assignments = ParentAssignments.Select((district, i) => proposal.Flips.ContainsKey(i) ? proposal.Flips[i] : district).ToArray();
+            Assignments = (int[])ParentAssignments.Clone();
+            
+            foreach ( var distAssignment in proposal.Flips)
+            {
+                int district = distAssignment.Key;
+                foreach (int node in distAssignment.Value)
+                {
+                    Assignments[node] = district;
+                }
+            }
             CutEdges = Graph.Graph.Edges.Where(e => Assignments[e.Source] != Assignments[e.Target]);
+            ProposalSummary = new ReComProposalSummary(proposal.DistrictsAffected, proposal.Flips, proposal.NewDistrictPops);
         }
 
         public Partition TakeSelfLoop()
@@ -129,8 +142,19 @@ namespace GerryChain
         /// </summary>
         /// <param name="districts">The two districts to generate the subgraph of </param>
         /// <returns> New UndirectedGraph instance. </returns>
-        public UndirectedGraph<int, IUndirectedEdge<int>> DistrictSubGraph(HashSet<int> districts) {
-            IEnumerable<IUndirectedEdge<int>> subgraphEdges = Graph.Graph.Edges.Where(e => districts.Contains(Assignments[e.Source]) && districts.Contains(Assignments[e.Target]));
+        public UndirectedGraph<int, IUndirectedEdge<int>> DistrictSubGraph((int A, int B) districts)
+        {
+            Func<IUndirectedEdge<int>, bool> inDistricts = e => 
+            {
+                int sourceDist = Assignments[e.Source];
+                int targetDist = Assignments[e.Target];
+                bool sourceIn = sourceDist == districts.A || sourceDist == districts.B;
+                bool targetIn = targetDist == districts.A || targetDist == districts.B;
+                return sourceIn && targetIn;
+
+            };
+            // districts.Contains(Assignments[e.Source]) && districts.Contains(Assignments[e.Target])
+            IEnumerable<IUndirectedEdge<int>> subgraphEdges = Graph.Graph.Edges.Where(e => inDistricts(e));
             return subgraphEdges.ToUndirectedGraph<int, IUndirectedEdge<int>>();
         }
         
