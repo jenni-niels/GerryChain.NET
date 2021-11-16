@@ -246,18 +246,18 @@ namespace GerryChain
                                                                            : Enumerable.Range(0, chain.BatchSize).AsParallel()
                                                                                        .WithDegreeOfParallelism(chain.MaxDegreeOfParallelism);
 
-                    IEnumerable<ReComProposal> proposals = seeds.Select(i => chain.SampleProposalViaCutEdge(currentPartition, randSeed + i));
-                    IEnumerable<ReComProposal> validProposals = proposals.Where(p => p is not null);
+                    ParallelQuery<ReComProposal> proposals = seeds.Select(i => chain.SampleProposalViaCutEdge(currentPartition, randSeed + i));
+                    ReComProposal[] validProposals = proposals.Where(p => p is not null).ToArray();
 
                     // foreach (ReComProposal p in validProposals)
                     // {
                     //     Console.WriteLine(p.NewDistrictPops.ToString());
                     // }
 
-                    currentPartition = validProposals.Count() switch
+                    currentPartition = validProposals.Length switch
                     {
                         0 => currentPartition.TakeSelfLoop(),
-                        > 0 => new Partition(validProposals.ElementAt(rng.Next(validProposals.Count()))),
+                        > 0 => new Partition(validProposals[rng.Next(validProposals.Length)]),
                         _ => throw new IndexOutOfRangeException("Length of valid proposals should not be negative!")
                     };
                 }
