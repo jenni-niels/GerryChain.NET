@@ -29,7 +29,7 @@ namespace GerryChain
                 double[] districtSums;
                 if (Partition.TryGetParentScore(name, out ScoreValue parentScoreValue))
                 {
-                    ReComProposalSummary delta = Partition.ProposalSummary;
+                    ProposalSummary delta = Partition.ProposalSummary;
                     districtSums = (double[])((DistrictWideScoreValue)parentScoreValue).Value.Clone();
 
                     districtSums[delta.DistrictsAffected.A] = delta.Flips[delta.DistrictsAffected.A].Select(n => Partition.Graph.Attributes[column][n])

@@ -16,8 +16,8 @@ namespace GerryChain
     /// <param name="DistrictsAffected"> The districts that were re-combined </param>
     /// <param name="Flips">The new district assignment </param>
     /// <param name="newDistrictPops"> The population of the new districts. </param>
-    public record ReComProposal(Partition Partition, (int A, int B) DistrictsAffected, Dictionary<int, int[]> Flips, (double, double) NewDistrictPops);
-    public record ReComProposalSummary((int A, int B) DistrictsAffected, Dictionary<int, int[]> Flips, (double, double) NewDistrictPops);
+    public record Proposal(Partition Partition, (int A, int B) DistrictsAffected, Dictionary<int, int[]> Flips, (double, double) NewDistrictPops);
+    public record ProposalSummary((int A, int B) DistrictsAffected, Dictionary<int, int[]> Flips, (double, double) NewDistrictPops);
 
 
     /// <summary>
@@ -36,13 +36,13 @@ namespace GerryChain
         private readonly bool useDefaultParallelism = false;
 
         /// <summary>
-        /// Constraints are encoded in the acceptance.
+        /// Constraints are encoded in the acceptance function.
         /// </summary>
         public Func<Partition, double> AcceptanceFunction { get; private set; }
         public double EpsilonBalance { get; private set; }
         private readonly double idealPopulation;
-        private readonly double minimumValidPopulation;
-        private readonly double maximumValidPopulation;
+
+        protected ProposalGenerator ChainType { get; init; }
 
         public Chain(Partition initialPartition, int numSteps, double epsilon, int randomSeed = 0,
                      Func<Partition, double> accept = null, int degreeOfParallelism = 0, int batchSize = 32)
@@ -58,45 +58,141 @@ namespace GerryChain
             else { MaxDegreeOfParallelism = degreeOfParallelism; }
 
             idealPopulation = InitialPartition.Graph.TotalPop / InitialPartition.NumDistricts;
-            minimumValidPopulation = idealPopulation * (1 - epsilon);
-            maximumValidPopulation = idealPopulation * (1 + epsilon);
+            ChainType = new CutEdgeReComProposalGenerator(idealPopulation, epsilon, initialPartition.Graph);
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+
+        public IEnumerator<Partition> GetEnumerator()
+        {
+            return new ChainEnumerator(this);
         }
 
         /// <summary>
-        /// Sample ReCom Proposal
+        /// Nested sub-class defining the enumeration behavior of the chain and how it selects the
+        /// next partition.
+        /// 
+        /// Only contains fields for the current partition, step, the RNG, and a reference to the
+        /// instance of the outer class.
         /// </summary>
-        /// <param name="currentPartition"></param>
-        /// <param name="randomSeed"></param>
-        /// <returns></returns>
-        private ReComProposal SampleProposalViaCutEdge(Partition currentPartition, int randomSeed)
+        public class ChainEnumerator : IEnumerator<Partition>
         {
-            Random generatorRNG = new Random(randomSeed);
-            IUndirectedEdge<int> cutedge = currentPartition.CutEdges.ElementAt(generatorRNG.Next(currentPartition.CutEdges.Count()));
-            (int A, int B) districts = (currentPartition.Assignments[cutedge.Source], currentPartition.Assignments[cutedge.Target] );
-            var subgraph = currentPartition.DistrictSubGraph(districts);
-            
-            UndirectedGraph<int, IUndirectedEdge<int>> mst = MST(generatorRNG, subgraph);
+            private readonly Chain chain;
+            private int step;
+            private Partition currentPartition;
+            private Random rng;
+            private Queue<Proposal> sampledValidProposals;
 
-            var balancedCut = FindBalancedCut(generatorRNG, mst, districts);
+            public ChainEnumerator(Chain chainDetails)
+            {
+                chain = chainDetails;
+                step = -1;
+                currentPartition = null;
+                rng = new Random(chain.RngSeed);
+            }
+            private Partition checkAcceptance(Proposal proposal, IEnumerable<Proposal> extraProposals = null)
+            {
+                Partition part = new Partition(proposal);
+                bool accept = rng.NextDouble() < chain.AcceptanceFunction(part);
+                if (accept)
+                {
+                    sampledValidProposals.Clear();
+                    return part;
+                }
+                else
+                {
+                    foreach (Proposal p in extraProposals)
+                    {
+                        sampledValidProposals.Enqueue(p);
+                    }
+                    return currentPartition.TakeSelfLoop();
+                }
+            }
+            public bool MoveNext()
+            {
+                step++;
+                if (step >= chain.MaxSteps)
+                {
+                    return false;
+                }
+                else if (step == 0)
+                {
+                    currentPartition = chain.InitialPartition;
+                    sampledValidProposals = new Queue<Proposal>();
+                }
+                else if (sampledValidProposals.Count > 0)
+                {
+                    currentPartition = checkAcceptance(sampledValidProposals.Dequeue());
+                }
+                else
+                {
+                    int randSeed = rng.Next();
+                    ParallelQuery<int> seeds = chain.useDefaultParallelism ? Enumerable.Range(0, chain.BatchSize).AsParallel()
+                                                                           : Enumerable.Range(0, chain.BatchSize).AsParallel()
+                                                                                       .WithDegreeOfParallelism(chain.MaxDegreeOfParallelism);
 
-            if (balancedCut is (Dictionary<int, int[]>, (int, int) districtsPops) cut)
-            {
-                return new ReComProposal(currentPartition, districts, cut.flips, cut.districtsPops);
+                    ParallelQuery<Proposal> proposals = seeds.Select(i => chain.ChainType.SampleProposal(currentPartition, randSeed + i));
+                    Proposal[] validProposals = proposals.Where(p => p is not null).ToArray();
+
+                    if (validProposals.Length == 0)
+                    {
+                        currentPartition = currentPartition.TakeSelfLoop();
+                    }
+                    else
+                    {
+                        int proposalIndex = rng.Next(validProposals.Length);
+                        currentPartition = checkAcceptance(validProposals[proposalIndex],
+                                                           extraProposals: validProposals.Where((p, i) => i != proposalIndex));
+                    }
+                }
+                return true;
             }
-            else
+            public void Reset()
             {
-                return null;
+                step = -1;
+                rng = new Random(chain.RngSeed);
             }
+            void IDisposable.Dispose() { }
+            public Partition Current
+            {
+                get { return currentPartition; }
+            }
+            object IEnumerator.Current
+            {
+                get { return Current; }
+            }
+
         }
+    }
 
-        private UndirectedGraph<int, IUndirectedEdge<int>> MST(Random generatorRNG, UndirectedGraph<int, IUndirectedEdge<int>> subgraph)
+    public abstract class ProposalGenerator
+    {
+        protected double MinimumValidPopulation { get; init; }
+        protected double MaximumValidPopulation { get; init; }
+        protected DualGraph Graph { get; init; }
+        public abstract Proposal SampleProposal(Partition currentPartition, int randomSeed);
+        protected bool IsValidPopulation(double population, double totalPopulation)
+        {
+            bool validDistrictA = population >= MinimumValidPopulation && population <= MaximumValidPopulation;
+            double districtBPop = totalPopulation - population;
+            bool validDistrictB = districtBPop >= MinimumValidPopulation && districtBPop <= MaximumValidPopulation;
+            return validDistrictA && validDistrictB;
+        }
+    }
+
+    public abstract class ReComProposalGenerator : ProposalGenerator
+    {
+        protected UndirectedGraph<int, IUndirectedEdge<int>> MST(Random generatorRNG, UndirectedGraph<int, IUndirectedEdge<int>> subgraph)
         {
             var edgeWeights = new Dictionary<long, double>();
 
             foreach (IUndirectedEdge<int> edge in subgraph.Edges)
             {
                 var edgeHash = DualGraph.EdgeHash(edge);
-                edgeWeights[edgeHash] = generatorRNG.NextDouble() + InitialPartition.Graph.RegionDivisionPenalties[edgeHash];
+                edgeWeights[edgeHash] = generatorRNG.NextDouble() + Graph.RegionDivisionPenalties[edgeHash];
             }
             var kruskal = new KruskalMinimumSpanningTreeAlgorithm<int, IUndirectedEdge<int>>(subgraph, e => edgeWeights[DualGraph.EdgeHash(e)]);
 
@@ -107,21 +203,13 @@ namespace GerryChain
             return edgeRecorder.Edges.ToUndirectedGraph<int, IUndirectedEdge<int>>();
         }
 
-        private bool IsValidPopulation(double population, double totalPopulation)
-        {
-            bool validDistrictA = population >= minimumValidPopulation && population <= maximumValidPopulation;
-            double districtBPop = totalPopulation - population;
-            bool validDistrictB = districtBPop >= minimumValidPopulation && districtBPop <= maximumValidPopulation;
-            return validDistrictA && validDistrictB;
-        }
-
         /// <summary>
         /// Using Contraction on the leaf nodes in the mst find and sample a valid cut on the MST.
         /// </summary>
         /// <param name="mst"></param>
         /// <returns>Proposal</returns>
         /// TODO:: consider trades of using dictionary as space array vs. a sparsly used array.
-        private (Dictionary<int, int[]> flips, (int A, int B) districtsPops)? FindBalancedCut(Random generatorRNG, UndirectedGraph<int, IUndirectedEdge<int>> mst, (int A, int B) districts)
+        protected (Dictionary<int, int[]> flips, (int A, int B) districtsPops)? FindBalancedCut(Random generatorRNG, UndirectedGraph<int, IUndirectedEdge<int>> mst, (int A, int B) districts)
         {
             int root = mst.Vertices.First(v => mst.AdjacentDegree(v) > 1);
             var leaves = new Queue<int>(mst.Vertices.Where(v => mst.AdjacentDegree(v) == 1));
@@ -134,7 +222,7 @@ namespace GerryChain
                                                           successors.Add(v);
                                                           return successors;
                                                       });
-            var nodePopulations = mst.Vertices.ToDictionary(v => v, v => InitialPartition.Graph.Populations[v]);
+            var nodePopulations = mst.Vertices.ToDictionary(v => v, v => Graph.Populations[v]);
             double totalPopulation = nodePopulations.Values.Sum();
 
             var bfs = new UndirectedBreadthFirstSearchAlgorithm<int, IUndirectedEdge<int>>(mst);
@@ -180,112 +268,42 @@ namespace GerryChain
             flips[districts.B] = districtB.ToArray();
             return ((Dictionary<int, int[]> flips, (int A, int B) districtsPops)?) (flips, (districtAPopulation, districtBPopulation));
         }
+    }
 
-        IEnumerator IEnumerable.GetEnumerator()
+    public class CutEdgeReComProposalGenerator : ReComProposalGenerator
+    {
+        public CutEdgeReComProposalGenerator(double idealPopulation, double epsilon, DualGraph graph)
         {
-            return GetEnumerator();
-        }
-
-        public IEnumerator<Partition> GetEnumerator()
-        {
-            return new ChainEnumerator(this);
+            MinimumValidPopulation = idealPopulation * (1 - epsilon);
+            MaximumValidPopulation = idealPopulation * (1 + epsilon);
+            Graph = graph;
         }
 
         /// <summary>
-        /// Nested sub-class defining the enumeration behavior of the chain and how it selects the
-        /// next partition.
-        /// 
-        /// Only contains fields for the current partition, step, the RNG, and a reference to the
-        /// instance of the outer class.
+        /// Sample Recom Proposal using random cut edge
         /// </summary>
-        public class ChainEnumerator : IEnumerator<Partition>
+        /// <param name="currentPartition"></param>
+        /// <param name="randomSeed"></param>
+        /// <returns></returns>
+        public override Proposal SampleProposal(Partition currentPartition, int randomSeed)
         {
-            private readonly Chain chain;
-            private int step;
-            private Partition currentPartition;
-            private Random rng;
-            private Queue<ReComProposal> sampledValidProposals;
+            Random generatorRNG = new Random(randomSeed);
+            IUndirectedEdge<int> cutedge = currentPartition.CutEdges.ElementAt(generatorRNG.Next(currentPartition.CutEdges.Count()));
+            (int A, int B) districts = (currentPartition.Assignments[cutedge.Source], currentPartition.Assignments[cutedge.Target]);
+            var subgraph = currentPartition.DistrictSubGraph(districts);
+            
+            UndirectedGraph<int, IUndirectedEdge<int>> mst = MST(generatorRNG, subgraph);
 
-            public ChainEnumerator(Chain chainDetails)
-            {
-                chain = chainDetails;
-                step = -1;
-                currentPartition = null;
-                rng = new Random(chain.RngSeed);
-            }
+            var balancedCut = FindBalancedCut(generatorRNG, mst, districts);
 
-            private Partition checkAcceptance(ReComProposal proposal, IEnumerable<ReComProposal> extraProposals = null)
+            if (balancedCut is (Dictionary<int, int[]>, (int, int) districtsPops) cut)
             {
-                Partition part = new Partition(proposal);
-                bool accept = rng.NextDouble() < chain.AcceptanceFunction(part);
-                if (accept)
-                {
-                    sampledValidProposals.Clear();
-                    return part;
-                }
-                else
-                {
-                    foreach (ReComProposal p in extraProposals)
-                    {
-                        sampledValidProposals.Enqueue(p);
-                    }
-                    return currentPartition.TakeSelfLoop();
-                }
+                return new Proposal(currentPartition, districts, cut.flips, cut.districtsPops);
             }
-            public bool MoveNext()
+            else
             {
-                step++;
-                if (step >= chain.MaxSteps)
-                {
-                    return false;
-                }
-                else if (step == 0)
-                {
-                    currentPartition = chain.InitialPartition;
-                    sampledValidProposals = new Queue<ReComProposal>();
-                }
-                else if (sampledValidProposals.Count > 0)
-                {
-                    currentPartition = checkAcceptance(sampledValidProposals.Dequeue());
-                }
-                else
-                {
-                    int randSeed = rng.Next();
-                    ParallelQuery<int> seeds = chain.useDefaultParallelism ? Enumerable.Range(0, chain.BatchSize).AsParallel()
-                                                                           : Enumerable.Range(0, chain.BatchSize).AsParallel()
-                                                                                       .WithDegreeOfParallelism(chain.MaxDegreeOfParallelism);
-
-                    ParallelQuery<ReComProposal> proposals = seeds.Select(i => chain.SampleProposalViaCutEdge(currentPartition, randSeed + i));
-                    ReComProposal[] validProposals = proposals.Where(p => p is not null).ToArray();
-
-                    if (validProposals.Length == 0)
-                    {
-                        currentPartition = currentPartition.TakeSelfLoop();
-                    }
-                    else
-                    {
-                        int proposalIndex = rng.Next(validProposals.Length);
-                        currentPartition = checkAcceptance(validProposals[proposalIndex],
-                                                           extraProposals: validProposals.Where((p, i) => i != proposalIndex));
-                    }
-                }
-                return true;
+                return null;
             }
-            public void Reset()
-            {
-                step = -1;
-                rng = new Random(chain.RngSeed);
-            }
-            void IDisposable.Dispose() { }
-            public Partition Current
-            {
-                get { return currentPartition; }
-            }
-            object IEnumerator.Current
-            {
-                get { return Current; }
-            }
-
-        }
+        } 
     }
 }

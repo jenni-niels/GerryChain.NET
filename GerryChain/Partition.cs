@@ -29,7 +29,7 @@ namespace GerryChain
         public bool HasParent { get; private set; }
         public int NumDistricts { get; private set; }
         public int[] ParentAssignments { get; private set; }
-        public ReComProposalSummary ProposalSummary { get; private set; }
+        public ProposalSummary ProposalSummary { get; private set; }
         public int SelfLoops { get; private set; } = 0;
 
         public IEnumerable<IUndirectedEdge<int>> CutEdges { get; private set; }
@@ -130,7 +130,7 @@ namespace GerryChain
         /// Generate a child partition from a proposal.
         /// </summary>
         /// <param name="proposal">Proposal defining child partition. </param>
-        public Partition(ReComProposal proposal)
+        public Partition(Proposal proposal)
         {
             Graph = proposal.Partition.Graph;
             ScoreFunctions = proposal.Partition.ScoreFunctions;
@@ -150,7 +150,7 @@ namespace GerryChain
                 }
             }
             CutEdges = Graph.Graph.Edges.Where(e => Assignments[e.Source] != Assignments[e.Target]);
-            ProposalSummary = new ReComProposalSummary(proposal.DistrictsAffected, proposal.Flips, proposal.NewDistrictPops);
+            ProposalSummary = new ProposalSummary(proposal.DistrictsAffected, proposal.Flips, proposal.NewDistrictPops);
         }
 
         public Partition TakeSelfLoop()
