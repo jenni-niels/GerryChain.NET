@@ -16,9 +16,11 @@ namespace GerryChain
     public record DualGraph
     {
         public double TotalPop { get; init; }
-        public UndirectedGraph<int, IUndirectedEdge<int>> Graph { get; init; }
+        public UndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>> Graph { get; init; }
         public double[] Populations { get; init; }
         public ImmutableDictionary<string, double[]> Attributes { get; init; }
     }
+
+    public record EdgeTag(int ID, double RegionDivisionPenalty);
 }
 

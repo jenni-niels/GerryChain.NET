@@ -18,7 +18,7 @@ namespace GerryChainExtensions
         /// TODO:: Add more options to the populations
         public static DualGraph GridGraph(int n, int m)
         {
-            var edges = new List<IUndirectedEdge<int>>();
+            var edges = new List<STaggedUndirectedEdge<int, EdgeTag>>();
             for (int col = 0; col < n; col++)
             {
                 for (int row = col; row < m; row++)
@@ -27,26 +27,26 @@ namespace GerryChainExtensions
                     if (col > 0)
                     {
                         int westNeighbor = ((col - 1) * m) + row;
-                        edges.Add(new SUndirectedEdge<int>(i, westNeighbor));
+                        edges.Add(new STaggedUndirectedEdge<int, EdgeTag>(i, westNeighbor, default));
                     }
                     if (col < n - 1)
                     {
                         int eastNeighbor = ((col + 1) * m) + row;
-                        edges.Add(new SUndirectedEdge<int>(i, eastNeighbor));
+                        edges.Add(new STaggedUndirectedEdge<int, EdgeTag>(i, eastNeighbor, default));
                     }
                     if (row > 0)
                     {
                         int southNeighbor = (col * m) + (row - 1);
-                        edges.Add(new SUndirectedEdge<int>(i, southNeighbor));
+                        edges.Add(new STaggedUndirectedEdge<int, EdgeTag>(i, southNeighbor, default));
                     }
                     if (row < m - 1)
                     {
                         int northNeighbor = (col * m) + (row + 1);
-                        edges.Add(new SUndirectedEdge<int>(i, northNeighbor));
+                        edges.Add(new STaggedUndirectedEdge<int, EdgeTag>(i, northNeighbor, default));
                     }
                 }
             }
-            var graph = edges.ToUndirectedGraph<int, IUndirectedEdge<int>>();
+            var graph = edges.ToUndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>>();
             var totalPop = n * m;
             var pops = Enumerable.Repeat<double>(1.0, n * m).ToArray();
 

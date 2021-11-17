@@ -32,7 +32,7 @@ namespace GerryChain
         public ReComProposalSummary ProposalSummary { get; private set; }
         public int SelfLoops { get; private set; } = 0;
 
-        public IEnumerable<IUndirectedEdge<int>> CutEdges { get; private set; }
+        public IEnumerable<STaggedUndirectedEdge<int, EdgeTag>> CutEdges { get; private set; }
 
         private Dictionary<string, Score> ScoreFunctions { get; set; }
         private Dictionary<string, ScoreValue> ScoreValues { get; set; }
@@ -71,7 +71,7 @@ namespace GerryChain
 
             double[] populations;
             int[] assignments;
-            IEnumerable<IUndirectedEdge<int>> edges;
+            IEnumerable<STaggedUndirectedEdge<int, EdgeTag>> edges;
             var attributes = new Dictionary<string, double[]>();
 
             using (StreamReader reader = File.OpenText(jsonFilePath))
@@ -86,7 +86,12 @@ namespace GerryChain
                 }
 
                 /// Nodes are assumed to be indexed from 0 to n-1 and listed in the json file in the order they are indexed.
-                edges = o["adjacency"].SelectMany((x, i) => x.Select(e => (IUndirectedEdge<int>) new SUndirectedEdge<int>(i, (int)e["id"])));
+                edges = o["adjacency"].SelectMany((x, i) => x.Select(e => {
+                     int u = i;
+                     int v = (int)e["id"];
+                     return u < v ? new STaggedUndirectedEdge<int, EdgeTag>(u, v, default)
+                                  : new STaggedUndirectedEdge<int, EdgeTag>(v, u, default);
+                 }));
             }
 
             bool oneIndexed = (assignments.Min() == 1);
@@ -95,7 +100,7 @@ namespace GerryChain
             {
                 Populations = populations,
                 TotalPop = populations.Sum(),
-                Graph = edges.ToUndirectedGraph<int, IUndirectedEdge<int>>(),
+                Graph = edges.ToUndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>>(),
                 Attributes = attributes.ToImmutableDictionary()
             };
             HasParent = false;
@@ -146,9 +151,9 @@ namespace GerryChain
         /// </summary>
         /// <param name="districts">The two districts to generate the subgraph of </param>
         /// <returns> New UndirectedGraph instance. </returns>
-        public UndirectedGraph<int, IUndirectedEdge<int>> DistrictSubGraph((int A, int B) districts)
+        public UndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>> DistrictSubGraph((int A, int B) districts)
         {
-            Func<IUndirectedEdge<int>, bool> inDistricts = e => 
+            Func<STaggedUndirectedEdge<int, EdgeTag>, bool> inDistricts = e => 
             {
                 int sourceDist = Assignments[e.Source];
                 int targetDist = Assignments[e.Target];
@@ -158,8 +163,8 @@ namespace GerryChain
 
             };
             // districts.Contains(Assignments[e.Source]) && districts.Contains(Assignments[e.Target])
-            IEnumerable<IUndirectedEdge<int>> subgraphEdges = Graph.Graph.Edges.Where(e => inDistricts(e));
-            return subgraphEdges.ToUndirectedGraph<int, IUndirectedEdge<int>>();
+            IEnumerable<STaggedUndirectedEdge<int, EdgeTag>> subgraphEdges = Graph.Graph.Edges.Where(e => inDistricts(e));
+            return subgraphEdges.ToUndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>>();
         }
         
         /// <summary>
