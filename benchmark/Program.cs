@@ -39,7 +39,7 @@ namespace benchmark
             var TallyVAP = Scores.TallyFactory("VAP", "VAP");
             var TallyPOP = Scores.TallyFactory("TOTPOP", "TOTPOP");
             var initPart = new Partition("../resources/al_vtds20_with_seeds.json", "CD_Seed", "TOTPOP", new string[] { "TOTPOP", "VAP", "BVAP" }, new Score[] { TallyBVAP, TallyPOP, TallyVAP });
-            var chain = new ReComChain(initPart, stepCount, 0.01, batchSize:batchSize, degreeOfParallelism:degreeOfParallelism);
+            var chain = new Chain(initPart, stepCount, 0.01, batchSize:batchSize, degreeOfParallelism:degreeOfParallelism);
             Console.WriteLine($"Loading data took: {sw.Elapsed.TotalSeconds:F6} seconds");
             sw = Stopwatch.StartNew();
             var bs = chain.Select(p => ((DistrictWideScoreValue) p.Score("BVAP")).Value.Zip(((DistrictWideScoreValue)p.Score("VAP")).Value, (b, v) => b/v)).ToArray();

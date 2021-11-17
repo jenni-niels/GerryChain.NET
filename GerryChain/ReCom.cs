@@ -26,7 +26,7 @@ namespace GerryChain
     /// <remarks>
     /// Inherits from IEnumerable<T> to support for each syntax and LINQ methods.
     /// </remarks>
-    public class ReComChain : IEnumerable<Partition>
+    public class Chain : IEnumerable<Partition>
     {
         public Partition InitialPartition { get; private set; }
         public int RngSeed { get; private set; }
@@ -43,11 +43,9 @@ namespace GerryChain
         private readonly double idealPopulation;
         private readonly double minimumValidPopulation;
         private readonly double maximumValidPopulation;
-        public bool CountyAware { get; private set; }
 
-        public ReComChain(Partition initialPartition, int numSteps, double epsilon, int randomSeed = 0,
-                        Func<Partition, double> accept = null, bool countyAware = false, int degreeOfParallelism = 0,
-                        int batchSize = 32)
+        public Chain(Partition initialPartition, int numSteps, double epsilon, int randomSeed = 0,
+                     Func<Partition, double> accept = null, int degreeOfParallelism = 0, int batchSize = 32)
         {
             InitialPartition = initialPartition;
             MaxSteps = numSteps;
@@ -55,7 +53,6 @@ namespace GerryChain
             RngSeed = randomSeed;
             BatchSize = batchSize;
             AcceptanceFunction = (accept is null) ? _ => 1.0 : accept;
-            CountyAware = countyAware;
 
             if (degreeOfParallelism < 1) { useDefaultParallelism = true; }
             else { MaxDegreeOfParallelism = degreeOfParallelism; }
@@ -66,13 +63,11 @@ namespace GerryChain
         }
 
         /// <summary>
-        /// 
+        /// Sample ReCom Proposal
         /// </summary>
         /// <param name="currentPartition"></param>
         /// <param name="randomSeed"></param>
         /// <returns></returns>
-        /// TODO:: add county aware option, where the edges are tagged with whether they cross county
-        /// bounds and that 
         private ReComProposal SampleProposalViaCutEdge(Partition currentPartition, int randomSeed)
         {
             Random generatorRNG = new Random(randomSeed);
@@ -100,7 +95,6 @@ namespace GerryChain
 
             foreach (IUndirectedEdge<int> edge in subgraph.Edges)
             {
-                // TODO:: add if CountyAware condition
                 var edgeHash = DualGraph.EdgeHash(edge);
                 edgeWeights[edgeHash] = generatorRNG.NextDouble() + InitialPartition.Graph.RegionDivisionPenalties[edgeHash];
             }
@@ -122,10 +116,10 @@ namespace GerryChain
         }
 
         /// <summary>
-        /// Using Contraction on the leaf nodes in the mst
+        /// Using Contraction on the leaf nodes in the mst find and sample a valid cut on the MST.
         /// </summary>
         /// <param name="mst"></param>
-        /// <returns></returns>
+        /// <returns>Proposal</returns>
         /// TODO:: consider trades of using dictionary as space array vs. a sparsly used array.
         private (Dictionary<int, int[]> flips, (int A, int B) districtsPops)? FindBalancedCut(Random generatorRNG, UndirectedGraph<int, IUndirectedEdge<int>> mst, (int A, int B) districts)
         {
@@ -194,7 +188,7 @@ namespace GerryChain
 
         public IEnumerator<Partition> GetEnumerator()
         {
-            return new ReComChainEnumerator(this);
+            return new ChainEnumerator(this);
         }
 
         /// <summary>
@@ -204,15 +198,15 @@ namespace GerryChain
         /// Only contains fields for the current partition, step, the RNG, and a reference to the
         /// instance of the outer class.
         /// </summary>
-        public class ReComChainEnumerator : IEnumerator<Partition>
+        public class ChainEnumerator : IEnumerator<Partition>
         {
-            private readonly ReComChain chain;
+            private readonly Chain chain;
             private int step;
             private Partition currentPartition;
             private Random rng;
             private Queue<ReComProposal> sampledValidProposals;
 
-            public ReComChainEnumerator(ReComChain chainDetails)
+            public ChainEnumerator(Chain chainDetails)
             {
                 chain = chainDetails;
                 step = -1;
