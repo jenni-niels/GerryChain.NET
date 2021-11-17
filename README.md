@@ -8,6 +8,8 @@ A .NET implementation of the ReCom Markov chain for redistricting.  Development 
 * ~~Add grid graph toy example~~
 * ~~Add unit test for initial graph representation~~
 * ~~Add json Parser for networkx format~~
+* Region aware support seems to have decreased performance by an order of magnitude.  Investigate further.
+
 
 * Score to make factories for:
     * ~~Tally~~
@@ -21,7 +23,7 @@ A .NET implementation of the ReCom Markov chain for redistricting.  Development 
 * Add Chain class
     * ~~ReCom step function (with parallelized proposal generation)~~
     * ~~Neutral ensemble sample~~
-    * Add support for County Aware chains.  But add region crossing tag to graph nodes that encode the scale of the edge weight.
+    * ~~Add support for County Aware chains.  But add region crossing tag to graph nodes that encode the scale of the edge weight.~~
 
 * Add Optimization chain class
     * Objective function representation.

@@ -1,8 +1,8 @@
 using System;
-using System.Collections.Immutable;
 using System.Collections.Generic;
-using System.Linq;
+using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using QuikGraph;
@@ -32,10 +32,11 @@ namespace GerryChain
         public ReComProposalSummary ProposalSummary { get; private set; }
         public int SelfLoops { get; private set; } = 0;
 
-        public IEnumerable<IUndirectedEdge<int>> CutEdges { get; private set; }
+        public IEnumerable<STaggedUndirectedEdge<int, EdgeTag>> CutEdges { get; private set; }
 
         private Dictionary<string, Score> ScoreFunctions { get; set; }
         private Dictionary<string, ScoreValue> ScoreValues { get; set; }
+        private Dictionary<string, ScoreValue> ParentScoreValues { get; set; }
 
         /// <summary>
         /// Generate initial partition on dualgraph.
@@ -48,8 +49,9 @@ namespace GerryChain
             Graph = graph;
             ScoreFunctions = Scores.ToDictionary(s => s.Name);
             ScoreValues = new Dictionary<string, ScoreValue>();
+            ParentScoreValues = new Dictionary<string, ScoreValue>();
             CutEdges = Graph.Graph.Edges.Where(e => Assignments[e.Source] != Assignments[e.Target]);
-            bool oneIndexed = (assignment.Min() == 1);
+            bool oneIndexed = assignment.Min() == 1;
             Assignments = oneIndexed ? assignment.Select(d => d - 1).ToArray() : assignment;
             NumDistricts = oneIndexed ? assignment.Max() : assignment.Max() + 1;
         }
@@ -64,12 +66,18 @@ namespace GerryChain
         /// <param name="columnsToTrack"> names of columns tracts as attributes </param>
         /// <returns> New instance of DualGraph record </returns>
         /// <remarks> Nodes are assumed to be indexed from 0 .. n-1 </remarks>
-        public Partition(string jsonFilePath, string assignmentColumn, string populationColumn, string[] columnsToTrack, IEnumerable<Score> Scores)
+        public Partition(string jsonFilePath, string assignmentColumn, string populationColumn, string[] columnsToTrack,
+                         IEnumerable<Score> Scores, bool regionAware = false, (string, double)[] regionDivisionSpecs = null)
         {
+            if (regionAware && regionDivisionSpecs is null)
+            {
+                throw new ArgumentException("Cannot create region aware graph without region specification.");
+            }
 
             double[] populations;
             int[] assignments;
-            IEnumerable<IUndirectedEdge<int>> edges;
+            var regions = new Dictionary<string, (double penalty, int[] mappings)>();
+            IEnumerable<STaggedUndirectedEdge<int, EdgeTag>> edges;
             var attributes = new Dictionary<string, double[]>();
 
             using (StreamReader reader = File.OpenText(jsonFilePath))
@@ -82,18 +90,44 @@ namespace GerryChain
                 {
                     attributes[c] = (from n in o["nodes"] select (double)n[c]).ToArray();
                 }
+                if (regionAware)
+                {
+                    foreach ((string regionColumn, double regionDivisionPenalty) in regionDivisionSpecs)
+                    {
+                        var regionAssignments = (from n in o["nodes"] select (int)n[regionColumn]).ToArray();
+                        regions[regionColumn] = (penalty: regionDivisionPenalty, mappings: regionAssignments);
+                    }
+                }
 
+                EdgeTag getEdgeTag(int index, int u, int v)
+                {
+                    double divisionPenalty = 0;
+                    foreach (KeyValuePair<string, (double penalty, int[] mappings)> region in regions)
+                    {
+                        if (region.Value.mappings[u] != region.Value.mappings[v])
+                        {
+                            divisionPenalty += region.Value.penalty;
+                        }
+                    }
+                    return new EdgeTag(index, divisionPenalty);
+                }
+                int edgeIndex = 0;
                 /// Nodes are assumed to be indexed from 0 to n-1 and listed in the json file in the order they are indexed.
-                edges = o["adjacency"].SelectMany((x, i) => x.Select(e => (IUndirectedEdge<int>) new SUndirectedEdge<int>(i, (int)e["id"])));
+                edges = o["adjacency"].SelectMany((x, i) => x.Select(e => {
+                    int u = i;
+                    int v = (int)e["id"];
+                    return u < v ? new STaggedUndirectedEdge<int, EdgeTag>(u, v, getEdgeTag(edgeIndex++, u, v))
+                                 : new STaggedUndirectedEdge<int, EdgeTag>(v, u, getEdgeTag(edgeIndex++, v, u));
+                }));
             }
 
-            bool oneIndexed = (assignments.Min() == 1);
+            bool oneIndexed = assignments.Min() == 1;
 
             Graph = new DualGraph
             {
                 Populations = populations,
                 TotalPop = populations.Sum(),
-                Graph = edges.ToUndirectedGraph<int, IUndirectedEdge<int>>(),
+                Graph = edges.ToUndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>>(),
                 Attributes = attributes.ToImmutableDictionary()
             };
             HasParent = false;
@@ -102,6 +136,7 @@ namespace GerryChain
             NumDistricts = oneIndexed ? assignments.Max() : assignments.Max() + 1;
             ScoreFunctions = Scores.ToDictionary(s => s.Name);
             ScoreValues = new Dictionary<string, ScoreValue>();
+            ParentScoreValues = new Dictionary<string, ScoreValue>();
             CutEdges = Graph.Graph.Edges.Where(e => Assignments[e.Source] != Assignments[e.Target]);
         }
 
@@ -115,6 +150,7 @@ namespace GerryChain
             ScoreFunctions = proposal.Partition.ScoreFunctions;
             ScoreValues = new Dictionary<string, ScoreValue>();
             ParentAssignments = proposal.Partition.Assignments;
+            ParentScoreValues = proposal.Partition.ScoreValues;
             NumDistricts = proposal.Partition.NumDistricts;
             HasParent = true;
             Assignments = (int[])ParentAssignments.Clone();
@@ -142,9 +178,9 @@ namespace GerryChain
         /// </summary>
         /// <param name="districts">The two districts to generate the subgraph of </param>
         /// <returns> New UndirectedGraph instance. </returns>
-        public UndirectedGraph<int, IUndirectedEdge<int>> DistrictSubGraph((int A, int B) districts)
+        public UndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>> DistrictSubGraph((int A, int B) districts)
         {
-            Func<IUndirectedEdge<int>, bool> inDistricts = e => 
+            Func<STaggedUndirectedEdge<int, EdgeTag>, bool> inDistricts = e => 
             {
                 int sourceDist = Assignments[e.Source];
                 int targetDist = Assignments[e.Target];
@@ -154,12 +190,12 @@ namespace GerryChain
 
             };
             // districts.Contains(Assignments[e.Source]) && districts.Contains(Assignments[e.Target])
-            IEnumerable<IUndirectedEdge<int>> subgraphEdges = Graph.Graph.Edges.Where(e => inDistricts(e));
-            return subgraphEdges.ToUndirectedGraph<int, IUndirectedEdge<int>>();
+            IEnumerable<STaggedUndirectedEdge<int, EdgeTag>> subgraphEdges = Graph.Graph.Edges.Where(e => inDistricts(e));
+            return subgraphEdges.ToUndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>>();
         }
         
         /// <summary>
-        /// Scores the partition on a metric
+        /// Gets the ScoreValue associated with the passed metric name.
         /// </summary>
         /// <param name="Name">Name of the score to compute</param>
         /// <returns>ScoreValue for the partition</returns>
@@ -180,6 +216,23 @@ namespace GerryChain
             {
                 throw new ArgumentException("Passed Score is not defined", Name);
             }
+        }
+
+        /// <summary>
+        /// Gets the parent's ScoreValue associated with the passed metric name
+        /// </summary>
+        /// <param name="Name"></param>
+        /// <param name="parentScoreValue"></param>
+        /// <returns> <c>true</c> if that score had already been computed for the parent partition and <c>false</c> otherwise. </returns>
+        public bool TryGetParentScore(string Name, out ScoreValue parentScoreValue)
+        {
+            if (ParentScoreValues.TryGetValue(Name, out ScoreValue value))
+            {
+                parentScoreValue = value;
+                return true;
+            }
+            parentScoreValue = default;
+            return false;
         }
     }
 }

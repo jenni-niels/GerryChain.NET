@@ -33,16 +33,16 @@ namespace GerryChain
         public int MaxSteps { get; private set; }
         public int MaxDegreeOfParallelism { get; private set; }
         public int BatchSize { get; private set; }
-        private bool useDefaultParallelism = false;
+        private readonly bool useDefaultParallelism = false;
 
         /// <summary>
         /// Constraints are encoded in the acceptance.
         /// </summary>
         public Func<Partition, double> AcceptanceFunction { get; private set; }
         public double EpsilonBalance { get; private set; }
-        private double idealPopulation;
-        private double minimumValidPopulation;
-        private double maximumValidPopulation;
+        private readonly double idealPopulation;
+        private readonly double minimumValidPopulation;
+        private readonly double maximumValidPopulation;
         public bool CountyAware { get; private set; }
 
         public ReComChain(Partition initialPartition, int numSteps, double epsilon, int randomSeed = 0,
@@ -66,17 +66,6 @@ namespace GerryChain
         }
 
         /// <summary>
-        /// Helper function to hash edges by a long rather than the class type.
-        /// </summary>
-        /// <param name="e">edge to hash</param>
-        /// <returns>ulong hash of edge</returns>
-        /// TODO:: see if this can be replace by giving each edge and index.
-        private static long EdgeHash(IUndirectedEdge<int> e)
-        {
-            return (long)e.Source << 32 ^ (int)e.Target;
-        }
-
-        /// <summary>
         /// 
         /// </summary>
         /// <param name="currentPartition"></param>
@@ -87,15 +76,15 @@ namespace GerryChain
         private ReComProposal SampleProposalViaCutEdge(Partition currentPartition, int randomSeed)
         {
             Random generatorRNG = new Random(randomSeed);
-            IUndirectedEdge<int> cutedge = currentPartition.CutEdges.ElementAt(generatorRNG.Next(currentPartition.CutEdges.Count()));
+            STaggedUndirectedEdge<int, EdgeTag> cutedge = currentPartition.CutEdges.ElementAt(generatorRNG.Next(currentPartition.CutEdges.Count()));
             (int A, int B) districts = (currentPartition.Assignments[cutedge.Source], currentPartition.Assignments[cutedge.Target] );
             var subgraph = currentPartition.DistrictSubGraph(districts);
             
-            UndirectedGraph<int, IUndirectedEdge<int>> mst = MST(generatorRNG, subgraph);
+            UndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>> mst = MST(generatorRNG, subgraph);
 
             var balancedCut = FindBalancedCut(generatorRNG, mst, districts);
 
-            if (balancedCut is (Dictionary<int, int[]> flips, (int A, int B) districtsPops) cut)
+            if (balancedCut is (Dictionary<int, int[]>, (int, int) districtsPops) cut)
             {
                 return new ReComProposal(currentPartition, districts, cut.flips, cut.districtsPops);
             }
@@ -105,21 +94,21 @@ namespace GerryChain
             }
         }
 
-        private UndirectedGraph<int, IUndirectedEdge<int>> MST(Random generatorRNG, UndirectedGraph<int, IUndirectedEdge<int>> subgraph)
+        private UndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>> MST(Random generatorRNG, UndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>> subgraph)
         {
             var edgeWeights = new Dictionary<long, double>();
 
-            foreach (IUndirectedEdge<int> edge in subgraph.Edges)
+            foreach (STaggedUndirectedEdge<int, EdgeTag> edge in subgraph.Edges)
                 // TODO:: add if CountyAware condition
-                edgeWeights[EdgeHash(edge)] = generatorRNG.NextDouble();
+                edgeWeights[edge.Tag.ID] = generatorRNG.NextDouble() + edge.Tag.RegionDivisionPenalty;
 
-            var kruskal = new KruskalMinimumSpanningTreeAlgorithm<int, IUndirectedEdge<int>>(subgraph, e => edgeWeights[EdgeHash(e)]);
+            var kruskal = new KruskalMinimumSpanningTreeAlgorithm<int, STaggedUndirectedEdge<int, EdgeTag>>(subgraph, e => edgeWeights[e.Tag.ID]);
 
-            var edgeRecorder = new EdgeRecorderObserver<int, IUndirectedEdge<int>>();
+            var edgeRecorder = new EdgeRecorderObserver<int, STaggedUndirectedEdge<int, EdgeTag>>();
             using (edgeRecorder.Attach(kruskal))
                 kruskal.Compute();
 
-            return edgeRecorder.Edges.ToUndirectedGraph<int, IUndirectedEdge<int>>();
+            return edgeRecorder.Edges.ToUndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>>();
         }
 
         private bool IsValidPopulation(double population, double totalPopulation)
@@ -136,7 +125,7 @@ namespace GerryChain
         /// <param name="mst"></param>
         /// <returns></returns>
         /// TODO:: consider trades of using dictionary as space array vs. a sparsly used array.
-        private (Dictionary<int, int[]> flips, (int A, int B) districtsPops)? FindBalancedCut(Random generatorRNG, UndirectedGraph<int, IUndirectedEdge<int>> mst, (int A, int B) districts)
+        private (Dictionary<int, int[]> flips, (int A, int B) districtsPops)? FindBalancedCut(Random generatorRNG, UndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>> mst, (int A, int B) districts)
         {
             int root = mst.Vertices.First(v => mst.AdjacentDegree(v) > 1);
             var leaves = new Queue<int>(mst.Vertices.Where(v => mst.AdjacentDegree(v) == 1));
@@ -152,8 +141,8 @@ namespace GerryChain
             var nodePopulations = mst.Vertices.ToDictionary(v => v, v => InitialPartition.Graph.Populations[v]);
             double totalPopulation = nodePopulations.Values.Sum();
 
-            var bfs = new UndirectedBreadthFirstSearchAlgorithm<int, IUndirectedEdge<int>>(mst);
-            var nodePredecessorObserver = new UndirectedVertexPredecessorRecorderObserver<int, IUndirectedEdge<int>>();
+            var bfs = new UndirectedBreadthFirstSearchAlgorithm<int, STaggedUndirectedEdge<int, EdgeTag>>(mst);
+            var nodePredecessorObserver = new UndirectedVertexPredecessorRecorderObserver<int, STaggedUndirectedEdge<int, EdgeTag>>();
             using (nodePredecessorObserver.Attach(bfs))
                 bfs.Compute(root);
 
@@ -215,7 +204,7 @@ namespace GerryChain
         /// </summary>
         public class ReComChainEnumerator : IEnumerator<Partition>
         {
-            private ReComChain chain;
+            private readonly ReComChain chain;
             private int step;
             private Partition currentPartition;
             private Random rng;
@@ -248,11 +237,6 @@ namespace GerryChain
 
                     ParallelQuery<ReComProposal> proposals = seeds.Select(i => chain.SampleProposalViaCutEdge(currentPartition, randSeed + i));
                     ReComProposal[] validProposals = proposals.Where(p => p is not null).ToArray();
-
-                    // foreach (ReComProposal p in validProposals)
-                    // {
-                    //     Console.WriteLine(p.NewDistrictPops.ToString());
-                    // }
 
                     currentPartition = validProposals.Length switch
                     {
