@@ -15,8 +15,15 @@ namespace GerryChain
     /// <param name="Partition">Original Partion</param>
     /// <param name="DistrictsAffected"> The districts that were re-combined </param>
     /// <param name="Flips">The new district assignment </param>
-    /// <param name="newDistrictPops"> The population of the new districts. </param>
+    /// <param name="NewDistrictPops"> The population of the new districts. </param>
     public record Proposal(Partition Partition, (int A, int B) DistrictsAffected, Dictionary<int, int[]> Flips, (double, double) NewDistrictPops);
+    
+    /// <summary>
+    /// Record encoding the information of a ReCom proposal, without the partion reference.
+    /// </summary>
+    /// <param name="DistrictsAffected"> The districts that were re-combined </param>
+    /// <param name="Flips">The new district assignment </param>
+    /// <param name="NewDistrictPops"> The population of the new districts. </param>
     public record ProposalSummary((int A, int B) DistrictsAffected, Dictionary<int, int[]> Flips, (double, double) NewDistrictPops);
 
 
@@ -38,21 +45,21 @@ namespace GerryChain
         /// <summary>
         /// Constraints are encoded in the acceptance function.
         /// </summary>
-        public Func<Partition, double> AcceptanceFunction { get; private set; }
+        public Func<Partition, int, double> AcceptanceFunction { get; private set; }
         public double EpsilonBalance { get; private set; }
         private readonly double idealPopulation;
 
         protected ProposalGenerator ChainType { get; init; }
 
         public Chain(Partition initialPartition, int numSteps, double epsilon, int randomSeed = 0,
-                     Func<Partition, double> accept = null, int degreeOfParallelism = 0, int batchSize = 32)
+                     Func<Partition, int, double> accept = null, int degreeOfParallelism = 0, int batchSize = 32)
         {
             InitialPartition = initialPartition;
             MaxSteps = numSteps;
             EpsilonBalance = epsilon;
             RngSeed = randomSeed;
             BatchSize = batchSize;
-            AcceptanceFunction = (accept is null) ? _ => 1.0 : accept;
+            AcceptanceFunction = (accept is null) ? (_, _) => 1.0 : accept;
 
             if (degreeOfParallelism < 1) { useDefaultParallelism = true; }
             else { MaxDegreeOfParallelism = degreeOfParallelism; }
@@ -93,10 +100,19 @@ namespace GerryChain
                 currentPartition = null;
                 rng = new Random(chain.RngSeed);
             }
-            private Partition checkAcceptance(Proposal proposal, IEnumerable<Proposal> extraProposals = null)
+
+            /// <summary>
+            /// Check if proposal is accepted.  If accepted the new partition is returned otherwise
+            /// a self loop is taken and the current partition is returned.
+            /// </summary>
+            /// <param name="proposal">Proposal to accept or reject.</param>
+            /// <param name="extraProposals">Other valid proposals to be cached if a rejection
+            /// / self loop occurs. </param>
+            /// <returns>Next step's partiton</returns>
+            private Partition CheckAcceptance(Proposal proposal, IEnumerable<Proposal> extraProposals = default)
             {
                 Partition part = new Partition(proposal);
-                bool accept = rng.NextDouble() < chain.AcceptanceFunction(part);
+                bool accept = rng.NextDouble() < chain.AcceptanceFunction(part, step);
                 if (accept)
                 {
                     sampledValidProposals.Clear();
@@ -111,6 +127,10 @@ namespace GerryChain
                     return currentPartition.TakeSelfLoop();
                 }
             }
+            /// <summary>
+            /// Take a step in the ChainEnumerator
+            /// </summary>
+            /// <returns></returns>
             public bool MoveNext()
             {
                 step++;
@@ -125,7 +145,7 @@ namespace GerryChain
                 }
                 else if (sampledValidProposals.Count > 0)
                 {
-                    currentPartition = checkAcceptance(sampledValidProposals.Dequeue());
+                    currentPartition = CheckAcceptance(sampledValidProposals.Dequeue());
                 }
                 else
                 {
@@ -144,7 +164,7 @@ namespace GerryChain
                     else
                     {
                         int proposalIndex = rng.Next(validProposals.Length);
-                        currentPartition = checkAcceptance(validProposals[proposalIndex],
+                        currentPartition = CheckAcceptance(validProposals[proposalIndex],
                                                            extraProposals: validProposals.Where((p, i) => i != proposalIndex));
                     }
                 }
@@ -168,6 +188,10 @@ namespace GerryChain
         }
     }
 
+    /// <summary>
+    /// Abstract class defining a ProposalGenerator.  Declares interface, common properties, and 
+    /// population validity of proposal.
+    /// </summary>
     public abstract class ProposalGenerator
     {
         protected double MinimumValidPopulation { get; init; }
@@ -183,9 +207,19 @@ namespace GerryChain
         }
     }
 
+    /// <summary>
+    /// Abstract class defining a ReComProposalGenerator.  Defines methods to sample a MST using
+    /// graph's region divion penalities and to find a population balanced cut edge in a MST.
+    /// </summary>
     public abstract class ReComProposalGenerator : ProposalGenerator
     {
-        protected UndirectedGraph<int, IUndirectedEdge<int>> MST(Random generatorRNG, UndirectedGraph<int, IUndirectedEdge<int>> subgraph)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="generatorRNG"></param>
+        /// <param name="subgraph"></param>
+        /// <returns></returns>
+        protected UndirectedGraph<int, IUndirectedEdge<int>> SampleMinimumSpanningTree(Random generatorRNG, UndirectedGraph<int, IUndirectedEdge<int>> subgraph)
         {
             var edgeWeights = new Dictionary<long, double>();
 
@@ -204,10 +238,11 @@ namespace GerryChain
         }
 
         /// <summary>
-        /// Using Contraction on the leaf nodes in the mst find and sample a valid cut on the MST.
+        /// Find balanced cut edge using contraction on the leaf nodes in the mst find.
         /// </summary>
-        /// <param name="mst"></param>
-        /// <returns>Proposal</returns>
+        /// <param name="mst">Minimum spanning tree of combined district</param>
+        /// <param name="districts">The district ids that have been combined.</param>
+        /// <returns> The new assignment of the districts and their populations </returns>
         /// TODO:: consider trades of using dictionary as space array vs. a sparsly used array.
         protected (Dictionary<int, int[]> flips, (int A, int B) districtsPops)? FindBalancedCut(Random generatorRNG, UndirectedGraph<int, IUndirectedEdge<int>> mst, (int A, int B) districts)
         {
@@ -282,8 +317,8 @@ namespace GerryChain
         /// <summary>
         /// Sample Recom Proposal using random cut edge
         /// </summary>
-        /// <param name="currentPartition"></param>
-        /// <param name="randomSeed"></param>
+        /// <param name="currentPartition">The current partition state of the chain..</param>
+        /// <param name="randomSeed">Task's RNG seed.</param>
         /// <returns></returns>
         public override Proposal SampleProposal(Partition currentPartition, int randomSeed)
         {
@@ -292,7 +327,7 @@ namespace GerryChain
             (int A, int B) districts = (currentPartition.Assignments[cutedge.Source], currentPartition.Assignments[cutedge.Target]);
             var subgraph = currentPartition.DistrictSubGraph(districts);
             
-            UndirectedGraph<int, IUndirectedEdge<int>> mst = MST(generatorRNG, subgraph);
+            UndirectedGraph<int, IUndirectedEdge<int>> mst = SampleMinimumSpanningTree(generatorRNG, subgraph);
 
             var balancedCut = FindBalancedCut(generatorRNG, mst, districts);
 
