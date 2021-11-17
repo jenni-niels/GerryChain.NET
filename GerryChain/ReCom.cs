@@ -210,6 +210,7 @@ namespace GerryChain
             private int step;
             private Partition currentPartition;
             private Random rng;
+            private Queue<ReComProposal> sampledValidProposals;
 
             public ReComChainEnumerator(ReComChain chainDetails)
             {
@@ -219,6 +220,24 @@ namespace GerryChain
                 rng = new Random(chain.RngSeed);
             }
 
+            private Partition checkAcceptance(ReComProposal proposal, IEnumerable<ReComProposal> extraProposals = null)
+            {
+                Partition part = new Partition(proposal);
+                bool accept = rng.NextDouble() < chain.AcceptanceFunction(part);
+                if (accept)
+                {
+                    sampledValidProposals.Clear();
+                    return part;
+                }
+                else
+                {
+                    foreach (ReComProposal p in extraProposals)
+                    {
+                        sampledValidProposals.Enqueue(p);
+                    }
+                    return currentPartition.TakeSelfLoop();
+                }
+            }
             public bool MoveNext()
             {
                 step++;
@@ -229,6 +248,11 @@ namespace GerryChain
                 else if (step == 0)
                 {
                     currentPartition = chain.InitialPartition;
+                    sampledValidProposals = new Queue<ReComProposal>();
+                }
+                else if (sampledValidProposals.Count > 0)
+                {
+                    currentPartition = checkAcceptance(sampledValidProposals.Dequeue());
                 }
                 else
                 {
@@ -240,12 +264,16 @@ namespace GerryChain
                     ParallelQuery<ReComProposal> proposals = seeds.Select(i => chain.SampleProposalViaCutEdge(currentPartition, randSeed + i));
                     ReComProposal[] validProposals = proposals.Where(p => p is not null).ToArray();
 
-                    currentPartition = validProposals.Length switch
+                    if (validProposals.Length == 0)
                     {
-                        0 => currentPartition.TakeSelfLoop(),
-                        > 0 => new Partition(validProposals[rng.Next(validProposals.Length)]),
-                        _ => throw new IndexOutOfRangeException("Length of valid proposals should not be negative!")
-                    };
+                        currentPartition = currentPartition.TakeSelfLoop();
+                    }
+                    else
+                    {
+                        int proposalIndex = rng.Next(validProposals.Length);
+                        currentPartition = checkAcceptance(validProposals[proposalIndex],
+                                                           extraProposals: validProposals.Where((p, i) => i != proposalIndex));
+                    }
                 }
                 return true;
             }
