@@ -71,7 +71,7 @@ namespace GerryChain
         /// <param name="e">edge to hash</param>
         /// <returns>ulong hash of edge</returns>
         /// TODO:: see if this can be replace by giving each edge and index.
-        private static long EdgeHash(STaggedUndirectedEdge<int, EdgeTag> e)
+        private static long EdgeHash(STaggedUndirectedEdge<int, double> e)
         {
             return (long)e.Source << 32 ^ (int)e.Target;
         }
@@ -87,11 +87,11 @@ namespace GerryChain
         private ReComProposal SampleProposalViaCutEdge(Partition currentPartition, int randomSeed)
         {
             Random generatorRNG = new Random(randomSeed);
-            STaggedUndirectedEdge<int, EdgeTag> cutedge = currentPartition.CutEdges.ElementAt(generatorRNG.Next(currentPartition.CutEdges.Count()));
+            STaggedUndirectedEdge<int, double> cutedge = currentPartition.CutEdges.ElementAt(generatorRNG.Next(currentPartition.CutEdges.Count()));
             (int A, int B) districts = (currentPartition.Assignments[cutedge.Source], currentPartition.Assignments[cutedge.Target] );
             var subgraph = currentPartition.DistrictSubGraph(districts);
             
-            UndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>> mst = MST(generatorRNG, subgraph);
+            UndirectedGraph<int, STaggedUndirectedEdge<int, double>> mst = MST(generatorRNG, subgraph);
 
             var balancedCut = FindBalancedCut(generatorRNG, mst, districts);
 
@@ -105,21 +105,21 @@ namespace GerryChain
             }
         }
 
-        private UndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>> MST(Random generatorRNG, UndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>> subgraph)
+        private UndirectedGraph<int, STaggedUndirectedEdge<int, double>> MST(Random generatorRNG, UndirectedGraph<int, STaggedUndirectedEdge<int, double>> subgraph)
         {
             var edgeWeights = new Dictionary<long, double>();
 
-            foreach (STaggedUndirectedEdge<int, EdgeTag> edge in subgraph.Edges)
+            foreach (STaggedUndirectedEdge<int, double> edge in subgraph.Edges)
                 // TODO:: add if CountyAware condition
-                edgeWeights[edge.Tag.ID] = generatorRNG.NextDouble() + edge.Tag.RegionDivisionPenalty;
+                edgeWeights[EdgeHash(edge)] = generatorRNG.NextDouble() + edge.Tag;
 
-            var kruskal = new KruskalMinimumSpanningTreeAlgorithm<int, STaggedUndirectedEdge<int, EdgeTag>>(subgraph, e => edgeWeights[e.Tag.ID]);
+            var kruskal = new KruskalMinimumSpanningTreeAlgorithm<int, STaggedUndirectedEdge<int, double>>(subgraph, e => edgeWeights[EdgeHash(e)]);
 
-            var edgeRecorder = new EdgeRecorderObserver<int, STaggedUndirectedEdge<int, EdgeTag>>();
+            var edgeRecorder = new EdgeRecorderObserver<int, STaggedUndirectedEdge<int, double>>();
             using (edgeRecorder.Attach(kruskal))
                 kruskal.Compute();
 
-            return edgeRecorder.Edges.ToUndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>>();
+            return edgeRecorder.Edges.ToUndirectedGraph<int, STaggedUndirectedEdge<int, double>>();
         }
 
         private bool IsValidPopulation(double population, double totalPopulation)
@@ -136,7 +136,7 @@ namespace GerryChain
         /// <param name="mst"></param>
         /// <returns></returns>
         /// TODO:: consider trades of using dictionary as space array vs. a sparsly used array.
-        private (Dictionary<int, int[]> flips, (int A, int B) districtsPops)? FindBalancedCut(Random generatorRNG, UndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>> mst, (int A, int B) districts)
+        private (Dictionary<int, int[]> flips, (int A, int B) districtsPops)? FindBalancedCut(Random generatorRNG, UndirectedGraph<int, STaggedUndirectedEdge<int, double>> mst, (int A, int B) districts)
         {
             int root = mst.Vertices.First(v => mst.AdjacentDegree(v) > 1);
             var leaves = new Queue<int>(mst.Vertices.Where(v => mst.AdjacentDegree(v) == 1));
@@ -152,8 +152,8 @@ namespace GerryChain
             var nodePopulations = mst.Vertices.ToDictionary(v => v, v => InitialPartition.Graph.Populations[v]);
             double totalPopulation = nodePopulations.Values.Sum();
 
-            var bfs = new UndirectedBreadthFirstSearchAlgorithm<int, STaggedUndirectedEdge<int, EdgeTag>>(mst);
-            var nodePredecessorObserver = new UndirectedVertexPredecessorRecorderObserver<int, STaggedUndirectedEdge<int, EdgeTag>>();
+            var bfs = new UndirectedBreadthFirstSearchAlgorithm<int, STaggedUndirectedEdge<int, double>>(mst);
+            var nodePredecessorObserver = new UndirectedVertexPredecessorRecorderObserver<int, STaggedUndirectedEdge<int, double>>();
             using (nodePredecessorObserver.Attach(bfs))
                 bfs.Compute(root);
 

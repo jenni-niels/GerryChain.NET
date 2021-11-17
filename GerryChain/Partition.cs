@@ -32,7 +32,7 @@ namespace GerryChain
         public ReComProposalSummary ProposalSummary { get; private set; }
         public int SelfLoops { get; private set; } = 0;
 
-        public IEnumerable<STaggedUndirectedEdge<int, EdgeTag>> CutEdges { get; private set; }
+        public IEnumerable<STaggedUndirectedEdge<int, double>> CutEdges { get; private set; }
 
         private Dictionary<string, Score> ScoreFunctions { get; set; }
         private Dictionary<string, ScoreValue> ScoreValues { get; set; }
@@ -77,7 +77,7 @@ namespace GerryChain
             double[] populations;
             int[] assignments;
             var regions = new Dictionary<string, (double penalty, int[] mappings)>();
-            IEnumerable<STaggedUndirectedEdge<int, EdgeTag>> edges;
+            IEnumerable<STaggedUndirectedEdge<int, double>> edges;
             var attributes = new Dictionary<string, double[]>();
 
             using (StreamReader reader = File.OpenText(jsonFilePath))
@@ -99,7 +99,8 @@ namespace GerryChain
                     }
                 }
 
-                EdgeTag getEdgeTag(int index, int u, int v)
+                // TODO:: collapse into LINQ expression
+                double divisionPenalty(int u, int v)
                 {
                     double divisionPenalty = 0;
                     foreach (KeyValuePair<string, (double penalty, int[] mappings)> region in regions)
@@ -109,15 +110,15 @@ namespace GerryChain
                             divisionPenalty += region.Value.penalty;
                         }
                     }
-                    return new EdgeTag(index, divisionPenalty);
+                    return divisionPenalty;
                 }
-                int edgeIndex = 0;
+
                 /// Nodes are assumed to be indexed from 0 to n-1 and listed in the json file in the order they are indexed.
                 edges = o["adjacency"].SelectMany((x, i) => x.Select(e => {
                     int u = i;
                     int v = (int)e["id"];
-                    return u < v ? new STaggedUndirectedEdge<int, EdgeTag>(u, v, getEdgeTag(edgeIndex++, u, v))
-                                 : new STaggedUndirectedEdge<int, EdgeTag>(v, u, getEdgeTag(edgeIndex++, v, u));
+                    return u < v ? new STaggedUndirectedEdge<int, double>(u, v, divisionPenalty(u, v))
+                                 : new STaggedUndirectedEdge<int, double>(v, u, divisionPenalty(v, u));
                 }));
             }
 
@@ -127,7 +128,7 @@ namespace GerryChain
             {
                 Populations = populations,
                 TotalPop = populations.Sum(),
-                Graph = edges.ToUndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>>(),
+                Graph = edges.ToUndirectedGraph<int, STaggedUndirectedEdge<int, double>>(),
                 Attributes = attributes.ToImmutableDictionary()
             };
             HasParent = false;
@@ -178,9 +179,9 @@ namespace GerryChain
         /// </summary>
         /// <param name="districts">The two districts to generate the subgraph of </param>
         /// <returns> New UndirectedGraph instance. </returns>
-        public UndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>> DistrictSubGraph((int A, int B) districts)
+        public UndirectedGraph<int, STaggedUndirectedEdge<int, double>> DistrictSubGraph((int A, int B) districts)
         {
-            Func<STaggedUndirectedEdge<int, EdgeTag>, bool> inDistricts = e => 
+            Func<STaggedUndirectedEdge<int, double>, bool> inDistricts = e => 
             {
                 int sourceDist = Assignments[e.Source];
                 int targetDist = Assignments[e.Target];
@@ -190,8 +191,8 @@ namespace GerryChain
 
             };
             // districts.Contains(Assignments[e.Source]) && districts.Contains(Assignments[e.Target])
-            IEnumerable<STaggedUndirectedEdge<int, EdgeTag>> subgraphEdges = Graph.Graph.Edges.Where(e => inDistricts(e));
-            return subgraphEdges.ToUndirectedGraph<int, STaggedUndirectedEdge<int, EdgeTag>>();
+            IEnumerable<STaggedUndirectedEdge<int, double>> subgraphEdges = Graph.Graph.Edges.Where(e => inDistricts(e));
+            return subgraphEdges.ToUndirectedGraph<int, STaggedUndirectedEdge<int, double>>();
         }
         
         /// <summary>
