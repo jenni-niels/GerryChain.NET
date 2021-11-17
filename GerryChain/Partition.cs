@@ -66,11 +66,17 @@ namespace GerryChain
         /// <param name="columnsToTrack"> names of columns tracts as attributes </param>
         /// <returns> New instance of DualGraph record </returns>
         /// <remarks> Nodes are assumed to be indexed from 0 .. n-1 </remarks>
-        public Partition(string jsonFilePath, string assignmentColumn, string populationColumn, string[] columnsToTrack, IEnumerable<Score> Scores)
+        public Partition(string jsonFilePath, string assignmentColumn, string populationColumn, string[] columnsToTrack,
+                         IEnumerable<Score> Scores, bool regionAware = false, (string, double)[] regionDivisionSpecs = null)
         {
+            if (regionAware && regionDivisionSpecs is null)
+            {
+                throw new ArgumentException("Cannot create region aware graph without region specification.");
+            }
 
             double[] populations;
             int[] assignments;
+            var regions = new Dictionary<string, (double penalty, int[] mappings)>();
             IEnumerable<STaggedUndirectedEdge<int, EdgeTag>> edges;
             var attributes = new Dictionary<string, double[]>();
 
@@ -84,17 +90,38 @@ namespace GerryChain
                 {
                     attributes[c] = (from n in o["nodes"] select (double)n[c]).ToArray();
                 }
+                if (regionAware)
+                {
+                    foreach ((string regionColumn, double regionDivisionPenalty) in regionDivisionSpecs)
+                    {
+                        var regionAssignments = (from n in o["nodes"] select (int)n[regionColumn]).ToArray();
+                        regions[regionColumn] = (penalty: regionDivisionPenalty, mappings: regionAssignments);
+                    }
+                }
 
+                EdgeTag getEdgeTag(int index, int u, int v)
+                {
+                    double divisionPenalty = 0;
+                    foreach (KeyValuePair<string, (double penalty, int[] mappings)> region in regions)
+                    {
+                        if (region.Value.mappings[u] != region.Value.mappings[v])
+                        {
+                            divisionPenalty += region.Value.penalty;
+                        }
+                    }
+                    return new EdgeTag(index, divisionPenalty);
+                }
+                int edgeIndex = 0;
                 /// Nodes are assumed to be indexed from 0 to n-1 and listed in the json file in the order they are indexed.
                 edges = o["adjacency"].SelectMany((x, i) => x.Select(e => {
-                     int u = i;
-                     int v = (int)e["id"];
-                     return u < v ? new STaggedUndirectedEdge<int, EdgeTag>(u, v, default)
-                                  : new STaggedUndirectedEdge<int, EdgeTag>(v, u, default);
-                 }));
+                    int u = i;
+                    int v = (int)e["id"];
+                    return u < v ? new STaggedUndirectedEdge<int, EdgeTag>(u, v, getEdgeTag(edgeIndex++, u, v))
+                                 : new STaggedUndirectedEdge<int, EdgeTag>(v, u, getEdgeTag(edgeIndex++, v, u));
+                }));
             }
 
-            bool oneIndexed = (assignments.Min() == 1);
+            bool oneIndexed = assignments.Min() == 1;
 
             Graph = new DualGraph
             {
