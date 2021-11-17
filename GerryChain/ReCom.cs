@@ -111,9 +111,9 @@ namespace GerryChain
 
             foreach (STaggedUndirectedEdge<int, EdgeTag> edge in subgraph.Edges)
                 // TODO:: add if CountyAware condition
-                edgeWeights[EdgeHash(edge)] = generatorRNG.NextDouble() + edge.Tag.RegionDivisionPenalty;
+                edgeWeights[edge.Tag.ID] = generatorRNG.NextDouble() + edge.Tag.RegionDivisionPenalty;
 
-            var kruskal = new KruskalMinimumSpanningTreeAlgorithm<int, STaggedUndirectedEdge<int, EdgeTag>>(subgraph, e => edgeWeights[EdgeHash(e)]);
+            var kruskal = new KruskalMinimumSpanningTreeAlgorithm<int, STaggedUndirectedEdge<int, EdgeTag>>(subgraph, e => edgeWeights[e.Tag.ID]);
 
             var edgeRecorder = new EdgeRecorderObserver<int, STaggedUndirectedEdge<int, EdgeTag>>();
             using (edgeRecorder.Attach(kruskal))
