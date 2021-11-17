@@ -26,10 +26,32 @@ namespace GerryChain
         {
             Func<Partition, DistrictWideScoreValue> districtTally = Partition =>
             {
-                /// TODO:: This computation can be optimized
-                double[] districtSums = Enumerable.Range(0, Partition.NumDistricts)
-                                                  .Select(d => Partition.Graph.Attributes[column].Where((v,i) => Partition.Assignments[i] == d).Sum())
-                                                  .ToArray();
+                double[] districtSums;
+                if (Partition.TryGetParentScore(name, out ScoreValue parentScoreValue))
+                {
+                    ReComProposalSummary delta = Partition.ProposalSummary;
+                    districtSums = (double[])((DistrictWideScoreValue)parentScoreValue).Value.Clone();
+
+                    districtSums[delta.DistrictsAffected.A] = delta.Flips[delta.DistrictsAffected.A].Select(n => Partition.Graph.Attributes[column][n])
+                                                                                                    .Sum();
+                    districtSums[delta.DistrictsAffected.B] = delta.Flips[delta.DistrictsAffected.B].Select(n => Partition.Graph.Attributes[column][n])
+                                                                                                    .Sum();
+                }
+                else
+                {
+                    districtSums = new double[Partition.NumDistricts];
+                    Array.Clear(districtSums, 0, Partition.NumDistricts);
+
+                    for (int i = 0; i < Partition.Assignments.Length; i++)
+                    {
+                        double nodeValue = Partition.Graph.Attributes[column][i];
+                        districtSums[Partition.Assignments[i]] += nodeValue;
+                    }
+                    /// TODO:: This computation can be optimized to be linear rather
+                        // districtSums = Enumerable.Range(0, Partition.NumDistricts)
+                        //                          .Select(d => Partition.Graph.Attributes[column].Where((v,i) => Partition.Assignments[i] == d).Sum())
+                        //                          .ToArray();
+                }
 
                 return new DistrictWideScoreValue(districtSums);
             };

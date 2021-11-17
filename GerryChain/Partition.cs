@@ -36,6 +36,7 @@ namespace GerryChain
 
         private Dictionary<string, Score> ScoreFunctions { get; set; }
         private Dictionary<string, ScoreValue> ScoreValues { get; set; }
+        private Dictionary<string, ScoreValue> ParentScoreValues { get; set; }
 
         /// <summary>
         /// Generate initial partition on dualgraph.
@@ -48,6 +49,7 @@ namespace GerryChain
             Graph = graph;
             ScoreFunctions = Scores.ToDictionary(s => s.Name);
             ScoreValues = new Dictionary<string, ScoreValue>();
+            ParentScoreValues = new Dictionary<string, ScoreValue>();
             CutEdges = Graph.Graph.Edges.Where(e => Assignments[e.Source] != Assignments[e.Target]);
             bool oneIndexed = (assignment.Min() == 1);
             Assignments = oneIndexed ? assignment.Select(d => d - 1).ToArray() : assignment;
@@ -102,6 +104,7 @@ namespace GerryChain
             NumDistricts = oneIndexed ? assignments.Max() : assignments.Max() + 1;
             ScoreFunctions = Scores.ToDictionary(s => s.Name);
             ScoreValues = new Dictionary<string, ScoreValue>();
+            ParentScoreValues = new Dictionary<string, ScoreValue>();
             CutEdges = Graph.Graph.Edges.Where(e => Assignments[e.Source] != Assignments[e.Target]);
         }
 
@@ -115,6 +118,7 @@ namespace GerryChain
             ScoreFunctions = proposal.Partition.ScoreFunctions;
             ScoreValues = new Dictionary<string, ScoreValue>();
             ParentAssignments = proposal.Partition.Assignments;
+            ParentScoreValues = proposal.Partition.ScoreValues;
             NumDistricts = proposal.Partition.NumDistricts;
             HasParent = true;
             Assignments = (int[])ParentAssignments.Clone();
@@ -180,6 +184,23 @@ namespace GerryChain
             {
                 throw new ArgumentException("Passed Score is not defined", Name);
             }
+        }
+        
+        /// <summary>
+        /// Gets the parent's ScoreValue associated with the passed metric name
+        /// </summary>
+        /// <param name="Name"></param>
+        /// <param name="parentScoreValue"></param>
+        /// <returns> <c>true</c> if that score had already been computed for the parent partition and <c>false</c> otherwise. </returns>
+        public bool TryGetParentScore(string Name, out ScoreValue parentScoreValue)
+        {
+            if (ParentScoreValues.TryGetValue(Name, out ScoreValue value))
+            {
+                parentScoreValue = value;
+                return true;
+            }
+            parentScoreValue = default;
+            return false;
         }
     }
 }
