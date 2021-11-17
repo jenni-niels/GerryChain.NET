@@ -27,22 +27,22 @@ namespace GerryChainExtensions
                     if (col > 0)
                     {
                         int westNeighbor = ((col - 1) * m) + row;
-                        edges.Add(new STaggedUndirectedEdge<int, EdgeTag>(i, westNeighbor, null));
+                        edges.Add(new STaggedUndirectedEdge<int, EdgeTag>(i, westNeighbor, default));
                     }
                     if (col < n - 1)
                     {
                         int eastNeighbor = ((col + 1) * m) + row;
-                        edges.Add(new STaggedUndirectedEdge<int, EdgeTag>(i, eastNeighbor, null));
+                        edges.Add(new STaggedUndirectedEdge<int, EdgeTag>(i, eastNeighbor, default));
                     }
                     if (row > 0)
                     {
                         int southNeighbor = (col * m) + (row - 1);
-                        edges.Add(new STaggedUndirectedEdge<int, EdgeTag>(i, southNeighbor, null));
+                        edges.Add(new STaggedUndirectedEdge<int, EdgeTag>(i, southNeighbor, default));
                     }
                     if (row < m - 1)
                     {
                         int northNeighbor = (col * m) + (row + 1);
-                        edges.Add(new STaggedUndirectedEdge<int, EdgeTag>(i, northNeighbor, null));
+                        edges.Add(new STaggedUndirectedEdge<int, EdgeTag>(i, northNeighbor, default));
                     }
                 }
             }
