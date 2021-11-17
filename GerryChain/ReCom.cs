@@ -40,9 +40,9 @@ namespace GerryChain
         /// </summary>
         public Func<Partition, double> AcceptanceFunction { get; private set; }
         public double EpsilonBalance { get; private set; }
-        private double idealPopulation;
-        private double minimumValidPopulation;
-        private double maximumValidPopulation;
+        private readonly double idealPopulation;
+        private readonly double minimumValidPopulation;
+        private readonly double maximumValidPopulation;
         public bool CountyAware { get; private set; }
 
         public ReComChain(Partition initialPartition, int numSteps, double epsilon, int randomSeed = 0,
@@ -215,7 +215,7 @@ namespace GerryChain
         /// </summary>
         public class ReComChainEnumerator : IEnumerator<Partition>
         {
-            private ReComChain chain;
+            private readonly ReComChain chain;
             private int step;
             private Partition currentPartition;
             private Random rng;
