@@ -24,28 +24,28 @@ namespace GerryChain
         /// <returns> Score record defining a tally. </returns>
         public static Score TallyFactory(string name, string column)
         {
-            Func<Partition, DistrictWideScoreValue> districtTally = Partition =>
+            Func<Partition, DistrictWideScoreValue> districtTally = partition =>
             {
                 double[] districtSums;
-                if (Partition.TryGetParentScore(name, out ScoreValue parentScoreValue))
+                if (partition.TryGetParentScore(name, out ScoreValue parentScoreValue))
                 {
-                    ProposalSummary delta = Partition.ProposalSummary;
+                    ProposalSummary delta = partition.ProposalSummary;
                     districtSums = (double[])((DistrictWideScoreValue)parentScoreValue).Value.Clone();
 
-                    districtSums[delta.DistrictsAffected.A] = delta.Flips[delta.DistrictsAffected.A].Select(n => Partition.Graph.Attributes[column][n])
+                    districtSums[delta.DistrictsAffected.A] = delta.Flips[delta.DistrictsAffected.A].Select(n => partition.Graph.Attributes[column][n])
                                                                                                     .Sum();
-                    districtSums[delta.DistrictsAffected.B] = delta.Flips[delta.DistrictsAffected.B].Select(n => Partition.Graph.Attributes[column][n])
+                    districtSums[delta.DistrictsAffected.B] = delta.Flips[delta.DistrictsAffected.B].Select(n => partition.Graph.Attributes[column][n])
                                                                                                     .Sum();
                 }
                 else
                 {
-                    districtSums = new double[Partition.NumDistricts];
-                    Array.Clear(districtSums, 0, Partition.NumDistricts);
+                    districtSums = new double[partition.NumDistricts];
+                    Array.Clear(districtSums, 0, partition.NumDistricts);
 
-                    for (int i = 0; i < Partition.Assignments.Length; i++)
+                    for (int i = 0; i < partition.Assignments.Length; i++)
                     {
-                        double nodeValue = Partition.Graph.Attributes[column][i];
-                        districtSums[Partition.Assignments[i]] += nodeValue;
+                        double nodeValue = partition.Graph.Attributes[column][i];
+                        districtSums[partition.Assignments[i]] += nodeValue;
                     }
                     /// TODO:: This computation can be optimized to be linear rather
                         // districtSums = Enumerable.Range(0, Partition.NumDistricts)

@@ -43,8 +43,13 @@ namespace GerryChain
         private readonly bool useDefaultParallelism = false;
 
         /// <summary>
-        /// Constraints are encoded in the acceptance function.
+        /// Function returning the propability of acceptance for a passed proposal and step.
+        /// If the return value is always >= 1, the function always accepts; if the return values is
+        /// always <= 0, the function always rejects.
         /// </summary>
+        /// <remarks>
+        /// Both hard and soft constraints can be applied to the chain here.
+        /// </remarks>
         public Func<Partition, int, double> AcceptanceFunction { get; private set; }
         public double EpsilonBalance { get; private set; }
         private readonly double idealPopulation;
