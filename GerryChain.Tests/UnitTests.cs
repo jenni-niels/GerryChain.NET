@@ -80,7 +80,7 @@ namespace GerryChain.Tests
             var path = new Paths();
             var filePath = System.IO.Path.Combine(path.executingAssemblyDir, "al_vtds20_with_seeds.json");
             Partition initPart = new Partition(filePath, "CD_Seed", "TOTPOP", new string[] { }, new Score[] { });
-            var chain = new ReComChain(initPart, 4, 0.05, degreeOfParallelism: 1);
+            var chain = new Chain(initPart, 4, 0.05, degreeOfParallelism: 1);
             Assert.False(chain.ElementAt(0).HasParent);
         }
 
@@ -90,7 +90,7 @@ namespace GerryChain.Tests
             var path = new Paths();
             var filePath = System.IO.Path.Combine(path.executingAssemblyDir, "al_vtds20_with_seeds.json");
             Partition initPart = new Partition(filePath, "CD_Seed", "TOTPOP", new string[] { }, new Score[] { });
-            var chain = new ReComChain(initPart, 4, 0.05, degreeOfParallelism: 1);
+            var chain = new Chain(initPart, 4, 0.05, degreeOfParallelism: 1);
             var p = chain.ElementAt(1);
             Assert.True(p.HasParent || p.SelfLoops > 0);
         }
