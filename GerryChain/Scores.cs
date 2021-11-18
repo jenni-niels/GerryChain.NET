@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace GerryChain
@@ -47,10 +48,6 @@ namespace GerryChain
                         double nodeValue = partition.Graph.Attributes[column][i];
                         districtSums[partition.Assignments[i]] += nodeValue;
                     }
-                    /// TODO:: This computation can be optimized to be linear rather
-                        // districtSums = Enumerable.Range(0, Partition.NumDistricts)
-                        //                          .Select(d => Partition.Graph.Attributes[column].Where((v,i) => Partition.Assignments[i] == d).Sum())
-                        //                          .ToArray();
                 }
 
                 return new DistrictWideScoreValue(districtSums);
@@ -60,11 +57,37 @@ namespace GerryChain
 
         public static Score NumCutEdgesFactory()
         {
-            Func<Partition, PlanWideScoreValue> cutEdges = Partition =>
+            Func<Partition, PlanWideScoreValue> cutEdges = partition =>
             {
-                return new PlanWideScoreValue(Partition.CutEdges.Count());
+                return new PlanWideScoreValue(partition.CutEdges.Count());
             };
             return new Score("NumCutEdges", cutEdges);
+        }
+
+        public static IEnumerable<Score> MinShareOverThresholdPlusNextHighest(string name, string minoirtyPopColumn, string popColumn, double threshold, string minPopTallyName=null, string popTallyName=null)
+        {
+            if (minPopTallyName is null)
+            {
+                minPopTallyName = minoirtyPopColumn;
+            }
+            if (popTallyName is null)
+            {
+                popTallyName = popColumn;
+            }
+            Func<Partition, PlanWideScoreValue> gingleatorFunc = partition =>
+            {
+                double[] minShares = ((DistrictWideScoreValue)partition.Score(minPopTallyName)).Value.Zip(((DistrictWideScoreValue)partition.Score(popTallyName)).Value, (b, v) => b / v).ToArray();
+                double numOver = minShares.Where(perc => perc >= threshold).Count();
+                double maxUnder = minShares.Where(perc => perc < threshold).Max();
+
+                return new PlanWideScoreValue(numOver + maxUnder);
+            };
+            Score gingles = new Score(name, gingleatorFunc);
+            var scores = new List<Score>();
+            scores.Add(TallyFactory(minoirtyPopColumn, minPopTallyName));
+            scores.Add(TallyFactory(popColumn, popTallyName));
+            scores.Add(gingles);
+            return scores ;
         }
     }
 }
