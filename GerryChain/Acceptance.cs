@@ -5,13 +5,13 @@ namespace GerryChain
 {
      public static class AcceptanceFunctions
      {
-         /// <summary>
-         /// Returns an acceptance function to 
-         /// </summary>
-         /// <param name="targetScoreName">The name of a plan-wide score.</param>
-         /// <param name="maximize"></param>
-         /// <returns></returns>
-         public static Func<Partition, int, double> SimulatedAnnealingFactory(Partition initialPartition, string targetScoreName, int durationHot, int durationCoolDown, int durationCold , bool maximize = true)
+        /// <summary>
+        /// Returns an acceptance function to 
+        /// </summary>
+        /// <param name="targetScoreName">The name of a plan-wide score.</param>
+        /// <param name="minimize"></param>
+        /// <returns></returns>
+        public static Func<Partition, int, double> SimulatedAnnealingFactory(Partition initialPartition, string targetScoreName, int durationHot, int durationCoolDown, int durationCold, double betaMagnitude, bool minimize = true)
          {
             int cycleLength = durationHot + durationCoolDown + durationCold;
             double initialScore = ((PlanWideScoreValue)initialPartition.Score(targetScoreName)).Value;
@@ -27,29 +27,29 @@ namespace GerryChain
                 }
                 double scoreDelta = step == 1 ? partScore - initialScore : partScore - ((PlanWideScoreValue)parentScoreValue).Value;
                 
-                if (maximize is false)
+                if (minimize is false)
                 {
                     scoreDelta *= -1;
                 }
                 
                 if (timeInCycle < durationHot)
                 {
-                    beta = 0.0;
+                    beta = 0.0*betaMagnitude;
                 }
                 else if (timeInCycle < durationHot + durationCoolDown)
                 {
-                    beta = (double) step / durationCoolDown; //todo
+                    beta = (double) step / durationCoolDown*betaMagnitude; //todo
                 }
                 else
                 {
-                    beta = 1.0;
+                    beta = 1.0*betaMagnitude;
                 }
                 return Math.Exp(-beta * scoreDelta);
             };
             return simulatedAnnealingAccept;
         }
 
-        public static Func<Partition, int, double> MetropolisHastingsFactory(Partition initialPartition, string targetScoreName, double beta, bool maximize=true)
+        public static Func<Partition, int, double> MetropolisHastingsFactory(Partition initialPartition, string targetScoreName, double beta, bool minimize=true)
         {
             double initialScore = ((PlanWideScoreValue)initialPartition.Score(targetScoreName)).Value;
             Func<Partition, int, double> metropolisHastingsAccept = (partition, step) =>
@@ -62,7 +62,7 @@ namespace GerryChain
                 }
                 double scoreDelta = step == 1 ? partScore - initialScore : partScore - ((PlanWideScoreValue)parentScoreValue).Value;
                 
-                if (maximize is false)
+                if (minimize is false)
                 {
                     scoreDelta *= -1;
                 }

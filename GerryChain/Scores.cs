@@ -55,13 +55,13 @@ namespace GerryChain
             return new Score(name, districtTally);
         }
 
-        public static Score NumCutEdgesFactory()
+        public static Score NumCutEdgesFactory(string Name)
         {
             Func<Partition, PlanWideScoreValue> cutEdges = partition =>
             {
                 return new PlanWideScoreValue(partition.CutEdges.Count());
             };
-            return new Score("NumCutEdges", cutEdges);
+            return new Score(Name, cutEdges);
         }
 
         public static IEnumerable<Score> MinShareOverThresholdPlusNextHighest(string name, string minoirtyPopColumn, string popColumn, double threshold, string minPopTallyName=null, string popTallyName=null)

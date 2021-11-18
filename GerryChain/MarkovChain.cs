@@ -114,7 +114,7 @@ namespace GerryChain
             /// <param name="extraProposals">Other valid proposals to be cached if a rejection
             /// / self loop occurs. </param>
             /// <returns>Next step's partiton</returns>
-            private Partition CheckAcceptance(Proposal proposal, IEnumerable<Proposal> extraProposals = default)
+            private Partition CheckAcceptance(Proposal proposal, IEnumerable<Proposal> extraProposals = null)
             {
                 Partition part = new Partition(proposal);
                 bool accept = rng.NextDouble() < chain.AcceptanceFunction(part, step);
@@ -125,9 +125,12 @@ namespace GerryChain
                 }
                 else
                 {
-                    foreach (Proposal p in extraProposals)
+                    if (extraProposals is not null)
                     {
-                        sampledValidProposals.Enqueue(p);
+                        foreach (Proposal p in extraProposals)
+                        {
+                            sampledValidProposals.Enqueue(p);
+                        }
                     }
                     return currentPartition.TakeSelfLoop();
                 }
