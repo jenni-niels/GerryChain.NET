@@ -1,4 +1,6 @@
 # Specify filepatterns you want git to ignore.
 .vscode
-*/bin
-*/obj
+bin
+obj
+.vs
+.DS_Store

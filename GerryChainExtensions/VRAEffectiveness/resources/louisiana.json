@@ -1,0 +1,139 @@
+{
+    "alignment_year": "2019",
+    "cvap_col": {"2015":"CVAP15","2016":"CVAP16","2017":"CVAP17","2018":"CVAP18","2019":"CVAP18"},
+    "minorities": {
+        "Black": {
+            "cvap_col": {"2015":"BCVAP17","2016":"BCVAP18","2017":"BCVAP18","2018":"BCVAP18","2019":"BCVAP18"},
+            "logit_params": {"coef": 6.353083092800907, "intercept": -2.4095124801524066}
+        }
+    },
+    "election_groups": [
+        {
+            "name": "GOV15",
+            "year": 2015,
+            "score": {"Black": 1},
+            "primary_cands": ["DeatonD_15P_Governor","EdwardsD_15P_Governor","SimpsonD_15P_Governor",
+                              "AngelleR_15P_Governor","DardenneR_15P_Governor","VitterR_15P_Governor",
+                              "BilliotU_15P_Governor","OdomU_15P_Governor","OrgeronU_15P_Governor"],
+            "primary_coc": {"Black": "EdwardsD_15P_Governor"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": ["EdwardsD_15G_Governor","VitterR_15G_Governor"],
+            "general_coc":{"Black": "EdwardsD_15G_Governor"}
+        },
+        {
+            "name": "SOS15",
+            "year": 2015,
+            "score": {"Black": 1},
+            "primary_cands": ["SchedlerR_15P_SOS","TysonD_15P_SOS"],
+            "primary_coc": {"Black": "TysonD_15P_SOS"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": null,
+            "general_coc": null
+        },
+        {
+            "name": "PRES16",
+            "year": 2016,
+            "score": {"Black": 1},
+            "primary_cands": ["BurkeD_16P_President","ClintonD_16P_President","FuenteD_16P_President",
+                              "HewesD_16P_President","JuddD_16P_President","OMalleyD_16P_President",
+                              "SandersD_16P_President","SteinbergD_16P_President","WilsonD_16P_President",
+                              "WolfeD_16P_President"],
+            "primary_coc": {"Black": "ClintonD_16P_President"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": ["TrumpR_16G_President","ClintonD_16G_President"],
+            "general_coc":{"Black": "ClintonD_16G_President"}
+        },
+        {
+            "name": "SEN16",
+            "year": 2016,
+            "score": {"Black": 1},
+            "primary_cands": ["BilliotU_16P_US_Sen","HebertU_16P_US_Sen","LangU_16P_US_Sen",
+                              "TaylorU_16P_US_Sen","WellsU_16P_US_Sen","CampbellD_16P_US_Sen",
+                              "EdwardsD_16P_US_Sen","FayardD_16P_US_Sen","LandrieuD_16P_US_Sen",
+                              "MendozaD_16P_US_Sen","PellerinD_16P_US_Sen","WilliamsD_16P_US_Sen",
+                              "ClementsL_16P_US_Sen","GillamL_16P_US_Sen","MaroneR_16P_US_Sen",
+                              "BoustanyR_16P_US_Sen","CaoR_16P_US_Sen","CrawfordR_16P_US_Sen",
+                              "DukeR_16P_US_Sen","FlemingR_16P_US_Sen","KennedyR_16P_US_Sen",
+                              "ManessR_16P_US_Sen","MarsalaR_16P_US_Sen","PatelR_16P_US_Sen"],
+            "primary_coc": {"Black": "CampbellD_16P_US_Sen"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": ["CampbellD_16G_US_Sen","KennedyR_16G_US_Sen"],
+            "general_coc":{"Black": "CampbellD_16G_US_Sen"}
+        },
+        {
+            "name": "TRES17",
+            "year": 2017,
+            "score": {"Black": 1},
+            "primary_cands": ["EdwardsD_17P_Treasurer","LittleL_17P_Treasurer","DavisR_17P_Treasurer",
+                              "HughesR_17P_Treasurer","RiserR_17P_Treasurer","SchroderR_17P_Treasurer"],
+            "primary_coc": {"Black": "EdwardsD_17P_Treasurer"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": ["EdwardsD_17G_Treasurer","SchroderR_17G_Treasurer"],
+            "general_coc":{"Black": "EdwardsD_17G_Treasurer"}
+        },
+        {
+            "name": "SOS18",
+            "year": 2018,
+            "score": {"Black": 1},
+            "primary_cands": ["GreenupD_18P_SOS","FreeD_18P_SOS","MoreauI_18P_SOS","ArdoinR_18P_SOS",
+                              "CloudR_18P_SOS","CroweR_18P_SOS","EdmondsR_18P_SOS","KennedyR_18P_SOS",
+                              "StokesR_18P_SOS"],
+            "primary_coc": {"Black": "GreenupD_18P_SOS"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": ["ArdoinR_18G_SOS","GreenupD_18G_SOS"],
+            "general_coc":{"Black": "GreenupD_18G_SOS"}
+        },
+        {
+            "name": "TRES19",
+            "year": 2019,
+            "score": {"Black": 1},
+            "primary_cands": ["EdwardsD_19P_Treasurer","SchroderR_19P_Treasurer","KennyU_19P_Treasurer"],
+            "primary_coc": {"Black": "EdwardsD_19P_Treasurer"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": null,
+            "general_coc": null
+        },
+        {
+            "name": "GOV19",
+            "year": 2019,
+            "score": {"Black": 1},
+            "primary_cands": ["DantzlerD_19P_Governor","EdwardsD_19P_Governor","AbrahaminR_19P_Governor",
+                              "LandryR_19P_Governor","RisponeR_19P_Governor","LandrieuI_19P_Governor"],
+            "primary_coc": {"Black": "EdwardsD_19P_Governor"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": ["EdwardsD_19G_Governor","RisponeR_19G_Governor"],
+            "general_coc":{"Black": "EdwardsD_19G_Governor"}
+        },
+        {
+            "name": "AGC19",
+            "year": 2019,
+            "score": {"Black": 1},
+            "primary_cands": ["GreenD_19P_Ag_Comm","GreerD_19P_Ag_Comm","WilliamsD_19P_Ag_Comm",
+                              "StrainR_19P_Ag_Comm","ZaunbrecherR_19P_Ag_Comm"],
+            "primary_coc": {"Black": "GreenD_19P_Ag_Comm"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": null,
+            "general_coc": null
+        },
+        {
+            "name": "LTG19",
+            "year": 2019,
+            "score": {"Black": 1},
+            "primary_cands": ["JonesD_19P_Lt_Governor","NungesserR_19P_Lt_Governor"],
+            "primary_coc": {"Black": "JonesD_19P_Lt_Governor"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": null,
+            "general_coc": null
+        }
+    ]
+}

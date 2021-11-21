@@ -64,7 +64,7 @@ namespace GerryChain
             return new Score(Name, cutEdges);
         }
 
-        public static IEnumerable<Score> MinShareOverThresholdPlusNextHighest(string name, string minoirtyPopColumn, string popColumn, double threshold, string minPopTallyName=null, string popTallyName=null)
+        public static IEnumerable<Score> MinShareOverThresholdPlusNextHighest(string name, string minoirtyPopColumn, string popColumn, double threshold, string minPopTallyName = null, string popTallyName = null)
         {
             if (minPopTallyName is null)
             {
@@ -87,7 +87,7 @@ namespace GerryChain
             scores.Add(TallyFactory(minoirtyPopColumn, minPopTallyName));
             scores.Add(TallyFactory(popColumn, popTallyName));
             scores.Add(gingles);
-            return scores ;
+            return scores;
         }
     }
 }

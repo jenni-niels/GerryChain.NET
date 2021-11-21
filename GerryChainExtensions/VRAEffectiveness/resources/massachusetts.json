@@ -1,0 +1,166 @@
+{
+    "alignment_year": "2020",
+    "cvap_col": {"2013":"CVAP14","2014":"CVAP14","2016":"CVAP16","2018":"CVAP18","2020":"CVAP19"},
+    "minorities": {
+        "Black": {
+            "cvap_col": {"2013":"BCVAP14","2014":"BCVAP14","2016":"BCVAP16","2018":"BCVAP18",
+                         "2020":"BCVAP19"},
+            "logit_params": null
+        },
+        "Hispanic": {
+            "cvap_col": {"2013":"HCVAP14","2014":"HCVAP14","2016":"HCVAP16","2018":"HCVAP18",
+                         "2020":"HCVAP19"},
+            "logit_params": null
+        },
+        "Asian": {
+            "cvap_col": {"2013":"ASIANCVAP14","2014":"ASIANCVAP14","2016":"ASIANCVAP16",
+                         "2018":"ASIANCVAP18","2020":"ASIANCVAP19"},
+            "logit_params": null
+        }
+    },
+    "election_groups": [
+        {
+            "name": "SEN13",
+            "year": 2013,
+            "score": {"Black": 0.14875, "Hispanic": 0.1486384375, "Asian": 0.14875},
+            "primary_cands": ["SEN13PEMARKEY", "SEN13PSLYNCH"],
+            "primary_coc": {"Black": "SEN13PEMARKEY", "Hispanic": "SEN13PEMARKEY", 
+                            "Asian": "SEN13PEMARKEY"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": ["SEN13GEMARKEY","SEN13GGGOMEZ"],
+            "general_coc":{"Black": "SEN13GEMARKEY", "Hispanic": "SEN13GEMARKEY", 
+                           "Asian": "SEN13GEMARKEY"}
+        },
+        {
+            "name": "GOV14",
+            "year": 2014,
+            "score": {"Black": 0.17675, "Hispanic": 0.17675, "Asian": 0.099245125},
+            "primary_cands": ["GOV14PMCOAKLEY", "GOV14PSGROSSMAN", "GOV14PDBERWICK"],
+            "primary_coc": {"Black": "GOV14PMCOAKLEY", "Hispanic": "GOV14PMCOAKLEY", 
+                            "Asian": "GOV14PSGROSSMAN"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": ["GOV14GCBAKER","GOV14GMCOAKLEY"],
+            "general_coc":{"Black": "GOV14GMCOAKLEY", "Hispanic": "GOV14GMCOAKLEY", 
+                           "Asian": "GOV14GMCOAKLEY"}
+        },
+        {
+            "name": "LTG14",
+            "year": 2014,
+            "score": {"Black": 0.17675, "Hispanic": 0.17675, "Asian": 0.3535},
+            "primary_cands": ["LTGOV14PSKERRIGAN", "LTGOV14PLCHEUNG", "LTGOV14PMLAKE"],
+            "primary_coc": {"Black": "LTGOV14PSKERRIGAN", "Hispanic": "LTGOV14PSKERRIGAN", 
+                            "Asian": "LTGOV14PLCHEUNG"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": ["GOV14GCBAKER","GOV14GMCOAKLEY"],
+            "general_coc":{"Black": "GOV14GMCOAKLEY", "Hispanic": "GOV14GMCOAKLEY", 
+                           "Asian": "GOV14GMCOAKLEY"}
+        },
+        {
+            "name": "AG14",
+            "year": 2014,
+            "score": {"Black": 0.123018, "Hispanic": 0.141488375, "Asian": 0.176661625},
+            "primary_cands": ["AG14PMHEALEY", "AG14PWTOLMAN"],
+            "primary_coc": {"Black": "AG14PWTOLMAN", "Hispanic": "AG14PWTOLMAN", 
+                            "Asian": "AG14PWTOLMAN"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": ["AG14GMHEALEY","AG14GJMILLER"],
+            "general_coc":{"Black": "AG14GMHEALEY", "Hispanic": "AG14GMHEALEY", 
+                           "Asian": "AG14GMHEALEY"}
+        },
+        {
+            "name": "TRES14",
+            "year": 2014,
+            "score": {"Black": 0.17675, "Hispanic": 0.176131375, "Asian": 0.137069625},
+            "primary_cands": ["TRE14PDGOLDBERG", "TRE14PBFINEGOLD", "TRE14PCONROY"],
+            "primary_coc": {"Black": "TRE14PDGOLDBERG", "Hispanic": "TRE14PBFINEGOLD", 
+                            "Asian": "TRE14PDGOLDBERG"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": ["TRE14GDGOLDBERG","TRE14GMHEFFERNAN"],
+            "general_coc":{"Black": "TRE14GDGOLDBERG", "Hispanic": "TRE14GDGOLDBERG", 
+                           "Asian": "TRE14GDGOLDBERG"}
+        },
+        {
+            "name": "PRES16",
+            "year": 2016,
+            "score": {"Black": 0.25, "Hispanic": 0.25, "Asian": 0.245625},
+            "primary_cands": ["PRES16PHCLINTON","PRES16PBSANDERS"],
+            "primary_coc": {"Black": "PRES16PHCLINTON", "Hispanic": "PRES16PHCLINTON", 
+                            "Asian": "PRES16PHCLINTON"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": ["PRES16GHCLINTON","PRES16GDTRUMP"],
+            "general_coc":{"Black": "PRES16GHCLINTON", "Hispanic": "PRES16GHCLINTON", 
+                           "Asian": "PRES16GHCLINTON"}
+        },
+        {
+            "name": "GOV18",
+            "year": 2018,
+            "score": {"Black": 0.3535, "Hispanic": 0.707, "Asian": 0.34483925},
+            "primary_cands": ["GOV18PJGONZALEZ", "GOV18PBMASSIE"],
+            "primary_coc": {"Black": "GOV18PJGONZALEZ", "Hispanic": "GOV18PJGONZALEZ", 
+                            "Asian": "GOV18PJGONZALEZ"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": ["GOV18GCBAKER", "GOV18GJGONZALEZ"],
+            "general_coc":{"Black": "GOV18GJGONZALEZ", "Hispanic": "GOV18GJGONZALEZ", 
+                           "Asian": "GOV18GJGONZALEZ"}
+        },
+        {
+            "name": "LTG18",
+            "year": 2018,
+            "score": {"Black": 0.3535, "Hispanic": 0.3535, "Asian": 0.2831535},
+            "primary_cands": ["LTGOV18PQPALFREY", "LTGOV18PJTINGLE"],
+            "primary_coc": {"Black": "LTGOV18PQPALFREY", "Hispanic": "LTGOV18PQPALFREY", 
+                            "Asian": "LTGOV18PJTINGLE"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": ["GOV18GCBAKER", "GOV18GJGONZALEZ"],
+            "general_coc":{"Black": "GOV18GJGONZALEZ", "Hispanic": "GOV18GJGONZALEZ",
+                           "Asian": "GOV18GJGONZALEZ"}
+        },
+        {
+            "name": "SOC18",
+            "year": 2018,
+            "score": {"Black": 0.3535, "Hispanic": 0.3535, "Asian": 0.35332325},
+            "primary_cands": ["SOC18PWGALVIN","SOC18PJZAKIM"],
+            "primary_coc": {"Black": "SOC18PWGALVIN", "Hispanic": "SOC18PWGALVIN", 
+                            "Asian": "SOC18PJZAKIM"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": ["SOC18GWGALVIN","SOC18GAAMORE"],
+            "general_coc":{"Black": "SOC18GWGALVIN", "Hispanic": "SOC18GWGALVIN",
+                           "Asian": "SOC18GWGALVIN"}
+        },
+        {
+            "name": "PRES20",
+            "year": 2020,
+            "score": {"Black": 0.5, "Hispanic": 0.5, "Asian": 0.5},
+            "primary_cands": ["PRES20PJBIDEN","PRES20PBSANDERS","PRES20PEWARREN","PRES20PMBLOOMBERG"],
+            "primary_coc": {"Black": "PRES20PJBIDEN", "Hispanic": "PRES20PBSANDERS", 
+                            "Asian": "PRES20PBSANDERS"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": ["PRES20GJBIDEN","PRES20GDTRUMP"],
+            "general_coc":{"Black": "PRES20GJBIDEN", "Hispanic": "PRES20GJBIDEN", 
+                           "Asian": "PRES20GJBIDEN"}
+        },
+        {
+            "name": "SEN20",
+            "year": 2020,
+            "score": {"Black": 0.5, "Hispanic": 0.5, "Asian": 0.5},
+            "primary_cands": ["SEN20PEMARKEY","SEN20PJKENNEDY"],
+            "primary_coc": {"Black": "SEN20PJKENNEDY", "Hispanic": "SEN20PJKENNEDY", 
+                            "Asian": "SEN20PEMARKEY"},
+            "runoff_cands": null,
+            "runoff_coc": null,
+            "general_cands": ["SEN20GEMARKEY","SEN20GKOCONNOR"],
+            "general_coc":{"Black": "SEN20GEMARKEY", "Hispanic": "SEN20GEMARKEY", 
+                           "Asian": "SEN20GEMARKEY"}
+        }
+    ]
+}

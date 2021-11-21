@@ -5,20 +5,7 @@
 
     <IsPackable>false</IsPackable>
   </PropertyGroup>
-  <PropertyGroup>
-    <DocumentationFile>/Library/gurobi912/mac64/lib/gurobi91.netstandard20.xml</DocumentationFile>
-  </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Gurobi91.NET">
-      <HintPath>/Library/gurobi912/mac64/lib/gurobi91.netstandard20.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="ExtensionScores/ExtensionScores.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\GerryChain\GerryChain.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\resources\al_vtds20_with_seeds.json" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-    
-
 </Project>
