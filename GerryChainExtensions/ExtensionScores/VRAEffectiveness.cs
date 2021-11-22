@@ -23,7 +23,25 @@ namespace GerryChain
 
             Func<Partition, VRAEffectivenessScoreValue> vraEffectiveness = partition =>
             {
-                var groupScores = VRA.Invoke(partition.Assignments);
+                FSharpMap<string, double[]> groupScores;
+                if (partition.TryGetParentScore(name, out ScoreValue parentScoreValue))
+                {
+                    ProposalSummary delta = partition.ProposalSummary;
+                    var districtsAffected = delta.DistrictsAffected;
+                    var districts = new int[] { districtsAffected.A, districtsAffected.B };
+                    groupScores = ((VRAEffectivenessScoreValue)parentScoreValue).Value;
+                    var groupDeltaScores = VRA.InvokeDistrictDeltas(partition.Assignments, districts);
+
+                    foreach (string group in groups)
+                    {
+                        groupScores[group][districtsAffected.A] = groupDeltaScores[group][districtsAffected.A];
+                        groupScores[group][districtsAffected.B] = groupDeltaScores[group][districtsAffected.B];
+                    }
+                }
+                else
+                {
+                    groupScores = VRA.Invoke(partition.Assignments);
+                }
                 return new VRAEffectivenessScoreValue(groupScores);
             };
 

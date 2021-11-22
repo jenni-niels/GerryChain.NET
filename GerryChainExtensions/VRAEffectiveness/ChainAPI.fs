@@ -33,6 +33,8 @@ type VRAAPI(state: string, alignmentType : AllignmentType) =
     let AlignmentYear = VRAparser.AlignmentYear
     let CoCSuccess = StateSuccessFunction.[state]
 
+    //let districtScore (districtCol: Column) 
+
     static member executingAssembly = System.Reflection.Assembly.GetExecutingAssembly().Location
     static member executingAssemblyDir = System.IO.Path.GetDirectoryName VRAAPI.executingAssembly
 
@@ -41,5 +43,11 @@ type VRAAPI(state: string, alignmentType : AllignmentType) =
     member this.Invoke (assignment: int array): Map<Minority.Name, float array> =
         let districtID = "District"
         let PlanData = StateData |> Frame.addCol districtID (assignment |> Array.mapi(fun i d -> (i, d)) |> Series.ofObservations)
-        let vrascores: PlanVRASummary<int> = PlanVRAEffectivenessDetailed PlanData districtID Minorities Elections CoCSuccess AlignmentYear alignment
-        vrascores |> Map.map (fun _ scores -> scores |> Map.map (fun _ s -> s.Score) |> Map.toSeq |> Seq.map snd |> Seq.toArray)
+        let vrascores: PlanVRAScores<int> = PlanVRAEffectiveness PlanData districtID Minorities Elections CoCSuccess AlignmentYear alignment
+        vrascores |> Map.map (fun _ scores -> scores |> Map.toSeq |> Seq.map snd |> Seq.toArray)
+
+    member this.InvokeDistrictDeltas (assignment: int array) (districts: int array) =
+        let districtID = "District"
+        let planData = StateData |> Frame.addCol districtID (assignment |> Array.mapi(fun i d -> (i, d)) |> Series.ofObservations)
+        let vrascores: PlanVRAScores<int> = PlanDistrictDetlaVRAEffectiveness planData districtID Minorities Elections CoCSuccess AlignmentYear alignment districts
+        vrascores // |> Map.map (fun _ scores -> scores |> Map.toSeq |> Seq.map snd |> Seq.toArray)

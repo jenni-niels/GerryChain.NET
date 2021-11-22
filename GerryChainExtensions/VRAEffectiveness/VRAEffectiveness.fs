@@ -352,9 +352,33 @@ module VRAEffectiveness =
             Seq.zip districtIDs VRAscores |> Map
     
         let minorityNames = minorities |> Array.map ((fun (name,_,_) -> name) << fst)
-        let minorityScores = minorities |> Array.map PlanVRAEffectivenessForMinority
+        let minorityScores = minorities |> Array.Parallel.map PlanVRAEffectivenessForMinority
         Array.zip minorityNames minorityScores |> Map.ofArray
 
+    /// <summary>
+    /// VRA Effectiveness Score for each district in the plan across all of the passed minority groups
+    /// </summary>
+    /// <param name="planData"> Frame containing precinct data and column representing district </param>
+    /// <param name="districtCol"> The Column containing district id. </param>
+    /// <param name="minorities"> Array of `(Minority.Minority * LogitParams option)` pairs to use for VRA Effectiveness scores</param>
+    /// <param name="elections"> Array of election groups to use in score computation </param>
+    /// <param name="successFunc"> How success in an election group is defined for the CoC </param>
+    /// <param name="alignmentYear"> For which years CVAP the alignment score is computed with respect to. </param>
+    /// <typeparam name="'a">The type of the Precinct Key index.  Should be string or int</typeparam>
+    /// <typeparam name="'b">The type of the district id.  Should be string or int</typeparam>
+    /// <returns> PlanVRAScores type.  Representing VRA Effectiveness scores for each district for each minority group </returns>
+    let PlanDistrictDetlaVRAEffectiveness planData (districtCol: Column) (minorities: (Minority.Minority * LogitParams option) array)
+                            (elections: ElectionGroup array) (successFunc: SuccessFunction<'a>) (alignmentYear: Year) alignment (districtIDs: 'a array)
+                            : PlanVRAScores<'b> = 
+        let districts = districtIDs |> Seq.map (fun d -> planData |> Frame.filterRowsBy districtCol d)
+     
+        let PlanVRAEffectivenessForMinority (minority: Minority.Minority, logitparams: LogitParams option) = 
+            let VRAscores = districts |> Seq.map (DistrictVRAEffectiveness minority elections successFunc logitparams alignmentYear alignment)
+            Seq.zip districtIDs VRAscores |> Map
+     
+        let minorityNames = minorities |> Array.map ((fun (name,_,_) -> name) << fst)
+        let minorityScores = minorities |> Array.Parallel.map PlanVRAEffectivenessForMinority
+        Array.zip minorityNames minorityScores |> Map.ofArray
 
     /// <summary>
     /// VRA Effectiveness Score and election details for each district in the plan across all of the passed
