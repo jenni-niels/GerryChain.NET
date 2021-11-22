@@ -59,7 +59,6 @@ namespace GerryChain
             
             Func<Partition, PlanWideScoreValue> gingleatorFunc = partition =>
             {
-
                 var groupScores = groups.ToDictionary(group => group, group => ((DistrictWideScoreValue)partition.Score($"{VRAEffectivenessScoreName}_{group}")).Value);
 
                 int numEffectiveDistricts = 0;
@@ -78,4 +77,4 @@ namespace GerryChain
             return new Score(name, gingleatorFunc);
         }
     }
-} 
+}
