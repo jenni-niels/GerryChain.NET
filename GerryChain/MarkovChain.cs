@@ -104,6 +104,7 @@ namespace GerryChain
                 step = -1;
                 currentPartition = null;
                 rng = new Random(chain.RngSeed);
+                sampledValidProposals = new Queue<Proposal>();
             }
 
             /// <summary>
@@ -149,7 +150,6 @@ namespace GerryChain
                 else if (step == 0)
                 {
                     currentPartition = chain.InitialPartition;
-                    sampledValidProposals = new Queue<Proposal>();
                 }
                 else if (sampledValidProposals.Count > 0)
                 {
@@ -182,6 +182,8 @@ namespace GerryChain
             {
                 step = -1;
                 rng = new Random(chain.RngSeed);
+                sampledValidProposals.Clear();
+                currentPartition = null;
             }
             void IDisposable.Dispose() { }
             public Partition Current

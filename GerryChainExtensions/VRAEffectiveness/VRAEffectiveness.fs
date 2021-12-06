@@ -368,7 +368,7 @@ module VRAEffectiveness =
     /// <typeparam name="'b">The type of the district id.  Should be string or int</typeparam>
     /// <returns> PlanVRAScores type.  Representing VRA Effectiveness scores for each district for each minority group </returns>
     let PlanDistrictDetlaVRAEffectiveness planData (districtCol: Column) (minorities: (Minority.Minority * LogitParams option) array)
-                            (elections: ElectionGroup array) (successFunc: SuccessFunction<'a>) (alignmentYear: Year) alignment (districtIDs: 'a array)
+                            (elections: ElectionGroup array) (successFunc: SuccessFunction<'a>) (alignmentYear: Year) alignment (districtIDs: 'b array)
                             : PlanVRAScores<'b> = 
         let districts = districtIDs |> Seq.map (fun d -> planData |> Frame.filterRowsBy districtCol d)
      

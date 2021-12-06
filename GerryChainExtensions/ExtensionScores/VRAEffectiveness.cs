@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using VRA;
 using Microsoft.FSharp.Collections;
+using VRA;
 
 namespace GerryChain
 {
@@ -11,7 +11,7 @@ namespace GerryChain
 
     public static class VRAEffectivenessScores
     {
-        public static IEnumerable<Score> GroupsVRAEffectivenessFactory(string name, string state, string alignmentType, string[] groups = null)
+        public static IEnumerable<Score> GroupsVRAEffectivenessFactory(string name, string state, string alignmentType, string geoidCol, string[] groups = null)
         {
             var alignment = alignmentType switch
             {
@@ -19,7 +19,7 @@ namespace GerryChain
                 "None" => AllignmentType.None,
                 _ => throw new AggregateException($"Unsupported alignment type: {alignmentType}")
             };
-            var VRA = new VRAAPI(state, alignment);
+            var VRA = new VRAAPI(state, alignment, geoidCol);
 
             Func<Partition, VRAEffectivenessScoreValue> vraEffectiveness = partition =>
             {
@@ -30,17 +30,17 @@ namespace GerryChain
                     var districtsAffected = delta.DistrictsAffected;
                     var districts = new int[] { districtsAffected.A, districtsAffected.B };
                     groupScores = ((VRAEffectivenessScoreValue)parentScoreValue).Value;
-                    var groupDeltaScores = VRA.InvokeDistrictDeltas(partition.Assignments, districts);
+                    var groupDeltaScores = VRA.InvokeDistrictDeltas(partition.Assignments, partition.Graph.Geoids, districts);
 
                     foreach (string group in groups)
                     {
-                        groupScores[group][districtsAffected.A] = groupDeltaScores[group][districtsAffected.A];
-                        groupScores[group][districtsAffected.B] = groupDeltaScores[group][districtsAffected.B];
+                        groupScores[group][districtsAffected.A] = groupDeltaScores[group][districtsAffected.A.ToString()];
+                        groupScores[group][districtsAffected.B] = groupDeltaScores[group][districtsAffected.B.ToString()];
                     }
                 }
                 else
                 {
-                    groupScores = VRA.Invoke(partition.Assignments);
+                    groupScores = VRA.Invoke(partition.Assignments, partition.Graph.Geoids);
                 }
                 return new VRAEffectivenessScoreValue(groupScores);
             };
@@ -55,7 +55,7 @@ namespace GerryChain
                 {
                     Func<Partition, DistrictWideScoreValue> groupEffectivness = partition =>
                     {
-                        var scores = ((VRAEffectivenessScoreValue) partition.Score(name)).Value;
+                        var scores = ((VRAEffectivenessScoreValue)partition.Score(name)).Value;
                         if (scores.TryGetValue(group, out double[] groupScores))
                         {
                             return new DistrictWideScoreValue(groupScores);
@@ -74,7 +74,7 @@ namespace GerryChain
 
         public static Score VRAEffectivenessOverThresholdPlusNextHighest(string name, double threshold, string VRAEffectivenessScoreName, string[] groups)
         {
-            
+
             Func<Partition, PlanWideScoreValue> gingleatorFunc = partition =>
             {
                 var groupScores = groups.ToDictionary(group => group, group => ((DistrictWideScoreValue)partition.Score($"{VRAEffectivenessScoreName}_{group}")).Value);
@@ -88,7 +88,10 @@ namespace GerryChain
                         numEffectiveDistricts++;
                     }
                 }
-                double maxUnder = groups.Select(group => groupScores[group].Where(e => e < threshold).Max()).Max();
+                double maxUnder = groups.Select(group => {
+                    var valsUnder = groupScores[group].Where(e => e < threshold);
+                    return valsUnder.Count() == 0 ? 0 : valsUnder.Max();
+                }).Max();
 
                 return new PlanWideScoreValue(numEffectiveDistricts + maxUnder);
             };

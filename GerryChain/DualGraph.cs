@@ -21,6 +21,8 @@ namespace GerryChain
         public double[] Populations { get; init; }
         public ImmutableDictionary<string, double[]> Attributes { get; init; }
 
+        public string[] Geoids { get; init; }
+
         /// <summary>
         /// Helper function to hash edges by a long rather than the class type.
         /// </summary>

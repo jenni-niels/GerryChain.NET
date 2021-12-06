@@ -67,7 +67,8 @@ namespace GerryChain
         /// <returns> New instance of DualGraph record </returns>
         /// <remarks> Nodes are assumed to be indexed from 0 .. n-1 </remarks>
         public Partition(string jsonFilePath, string assignmentColumn, string populationColumn, string[] columnsToTrack,
-                         IEnumerable<Score> Scores, bool regionAware = false, (string, double)[] regionDivisionSpecs = null)
+                         IEnumerable<Score> scores, bool regionAware = false, (string, double)[] regionDivisionSpecs = null,
+                         bool reorderNumbers = false, string geoidCol = null)
         {
             if (regionAware && regionDivisionSpecs is null)
             {
@@ -76,6 +77,7 @@ namespace GerryChain
 
             double[] populations;
             int[] assignments;
+            string[] geoids = null;
             var regions = new Dictionary<string, (double penalty, int[] mappings)>();
             IEnumerable<IUndirectedEdge<int>> edges;
             var attributes = new Dictionary<string, double[]>();
@@ -98,6 +100,10 @@ namespace GerryChain
                         regions[regionColumn] = (penalty: regionDivisionPenalty, mappings: regionAssignments);
                     }
                 }
+                if (geoidCol is not null)
+                {
+                    geoids = (from n in o["nodes"] select (string)n[geoidCol]).ToArray();
+                }
 
                 edges = o["adjacency"].SelectMany((x, i) => x.Select(e => (IUndirectedEdge<int>) new SUndirectedEdge<int>(i, (int)e["id"])));
             }
@@ -106,7 +112,7 @@ namespace GerryChain
                                                              e => regions.Aggregate(0.0, (penalty, region) => penalty + region.Value.mappings[e.Source] == region.Value.mappings[e.Target]
                                                                                                                         ? 0.0 : region.Value.penalty));
 
-            bool oneIndexed = assignments.Min() == 1;
+
 
             Graph = new DualGraph
             {
@@ -114,13 +120,25 @@ namespace GerryChain
                 TotalPop = populations.Sum(),
                 Graph = edges.ToUndirectedGraph<int, IUndirectedEdge<int>>(),
                 Attributes = attributes.ToImmutableDictionary(),
-                RegionDivisionPenalties = regionDivisionPenalties
-            };
+                RegionDivisionPenalties = regionDivisionPenalties,
+                Geoids = geoids
+        };
             HasParent = false;
             /// Assignment column must be 0 or 1 indexed.
-            Assignments = oneIndexed ? assignments.Select(d => d - 1).ToArray() : assignments;
-            NumDistricts = oneIndexed ? assignments.Max() : assignments.Max() + 1;
-            ScoreFunctions = Scores.ToDictionary(s => s.Name);
+            if (reorderNumbers)
+            {
+                int newDistrict = 0;
+                var districtKeys = assignments.Distinct().ToDictionary(d => d, d => newDistrict++);
+                NumDistricts = districtKeys.Count;
+                Assignments = assignments.Select(d => districtKeys[d]).ToArray();
+            }
+            else
+            {
+                bool oneIndexed = assignments.Min() == 1;
+                Assignments = oneIndexed ? assignments.Select(d => d - 1).ToArray() : assignments;
+                NumDistricts = oneIndexed ? assignments.Max() : assignments.Max() + 1;
+            }
+            ScoreFunctions = scores.ToDictionary(s => s.Name);
             ScoreValues = new Dictionary<string, ScoreValue>();
             ParentScoreValues = new Dictionary<string, ScoreValue>();
             CutEdges = Graph.Graph.Edges.Where(e => Assignments[e.Source] != Assignments[e.Target]);

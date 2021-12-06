@@ -78,7 +78,8 @@ namespace GerryChain
             {
                 double[] minShares = ((DistrictWideScoreValue)partition.Score(minPopTallyName)).Value.Zip(((DistrictWideScoreValue)partition.Score(popTallyName)).Value, (b, v) => b / v).ToArray();
                 double numOver = minShares.Where(perc => perc >= threshold).Count();
-                double maxUnder = minShares.Where(perc => perc < threshold).Max();
+                var valsUnder = minShares.Where(perc => perc < threshold);
+                double maxUnder = valsUnder.Count() == 0 ? 0 : valsUnder.Max();
 
                 return new PlanWideScoreValue(numOver + maxUnder);
             };
