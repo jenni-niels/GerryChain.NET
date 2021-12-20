@@ -4,7 +4,7 @@ using System.Linq;
 using Microsoft.FSharp.Collections;
 using VRA;
 
-namespace GerryChain
+namespace GerryChainExtensions
 {
     public record VRAEffectivenessScoreValue(FSharpMap<string, double[]> Value)
         : ScoreValue;

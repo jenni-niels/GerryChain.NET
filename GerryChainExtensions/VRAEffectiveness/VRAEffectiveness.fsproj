@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
   <!-- <ItemGroup>
     <Compile Include="VRAEffectiveness.fs" />
@@ -15,9 +15,9 @@
     <None Include="resources/massachusetts.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="resources/massachusetts.csv" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Function.fs" />
-    <PackageReference Include="Deedle" Version="2.3.0" />
-    <PackageReference Include="FSharp.Data" Version="4.0.1" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="Deedle" Version="2.5.0" />
+    <PackageReference Include="FSharp.Data" Version="4.2.6" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <Compile Include="VRAEffectiveness.fs" />
     <Compile Include="ChainAPI.fs" />
   </ItemGroup>

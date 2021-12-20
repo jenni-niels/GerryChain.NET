@@ -4,7 +4,7 @@ using System.Linq;
 using GerryChain;
 using Gurobi;
 
-namespace GerryChain
+namespace GerryChainExtensions
 {
     public static class PopulationDisplacementScores
     {

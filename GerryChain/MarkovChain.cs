@@ -275,18 +275,24 @@ namespace GerryChain
             using (nodePredecessorObserver.Attach(bfs))
                 bfs.Compute(root);
 
-            var cuts = new List<int>();
+            (double Penalty, int Node, bool Initialized) maxCut = (0, 0, false);
+
             while (leaves.Count > 0)
             {
                 int leaf = leaves.Dequeue();
                 double leafPopulation = nodePopulations[leaf];
                 if (IsValidPopulation(leafPopulation, totalPopulation))
                 {
-                    cuts.Add(leaf);
+                    var edge = nodePredecessorObserver.VerticesPredecessors[leaf];
+                    var edgeHash = DualGraph.EdgeHash(edge);
+                    var edgePenalty = Graph.RegionDivisionPenalties[edgeHash] + generatorRNG.NextDouble();
+                    if (edgePenalty >= maxCut.Penalty){
+                        maxCut = (edgePenalty, leaf, true);
+                    }
                 }
                 int parent = nodePredecessorObserver.VerticesPredecessors[leaf].GetOtherVertex(leaf);
 
-                /// Contract leaf and parent
+                // Contract leaf and parent
                 nodePopulations[parent] += leafPopulation;
                 nodePaths[parent].UnionWith(nodePaths[leaf]);
                 mst.RemoveVertex(leaf);
@@ -297,11 +303,11 @@ namespace GerryChain
                 }
             }
 
-            if (cuts.Count == 0)
+            if (! maxCut.Initialized)
             {
                 return null;
             }
-            int cut = cuts.ElementAt(generatorRNG.Next(cuts.Count));
+            int cut = maxCut.Node;
             double districtAPopulation = nodePopulations[cut];
             double districtBPopulation = totalPopulation - districtAPopulation;
             HashSet<int> districtA = nodePaths[cut];
