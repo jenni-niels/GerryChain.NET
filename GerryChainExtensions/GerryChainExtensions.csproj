@@ -6,6 +6,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="ExtensionScores/ExtensionScores.csproj" />
+    <!-- <ProjectReference Include="ExtensionScores/ExtensionScores.csproj" />
+    <ProjectReference Include="PCompress/PCompress.csproj" /> -->
   </ItemGroup>
 </Project>

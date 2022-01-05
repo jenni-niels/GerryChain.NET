@@ -5,8 +5,6 @@
 
     <IsPackable>false</IsPackable>
   </PropertyGroup>
-  
-  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\GerryChain\GerryChain.csproj" />
   </ItemGroup>

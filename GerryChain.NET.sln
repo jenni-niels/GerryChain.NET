@@ -13,6 +13,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExtensionScores", "GerryCha
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "VRAEffectiveness", "GerryChainExtensions\VRAEffectiveness\VRAEffectiveness.fsproj", "{0F01AB31-1B78-491A-BAFD-686C2E345977}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GerryChainExtensions", "GerryChainExtensions", "{A8F06211-7171-49A0-8ADB-13D4B72148C5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PCompress", "GerryChainExtensions\PCompress\PCompress.csproj", "{3004476F-DAFB-4EA8-9160-6F93D13FD615}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -86,5 +90,19 @@ Global
 		{0F01AB31-1B78-491A-BAFD-686C2E345977}.Release|x64.Build.0 = Release|Any CPU
 		{0F01AB31-1B78-491A-BAFD-686C2E345977}.Release|x86.ActiveCfg = Release|Any CPU
 		{0F01AB31-1B78-491A-BAFD-686C2E345977}.Release|x86.Build.0 = Release|Any CPU
+		{3004476F-DAFB-4EA8-9160-6F93D13FD615}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3004476F-DAFB-4EA8-9160-6F93D13FD615}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3004476F-DAFB-4EA8-9160-6F93D13FD615}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3004476F-DAFB-4EA8-9160-6F93D13FD615}.Debug|x64.Build.0 = Debug|Any CPU
+		{3004476F-DAFB-4EA8-9160-6F93D13FD615}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3004476F-DAFB-4EA8-9160-6F93D13FD615}.Debug|x86.Build.0 = Debug|Any CPU
+		{3004476F-DAFB-4EA8-9160-6F93D13FD615}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3004476F-DAFB-4EA8-9160-6F93D13FD615}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3004476F-DAFB-4EA8-9160-6F93D13FD615}.Release|x64.ActiveCfg = Release|Any CPU
+		{3004476F-DAFB-4EA8-9160-6F93D13FD615}.Release|x64.Build.0 = Release|Any CPU
+		{3004476F-DAFB-4EA8-9160-6F93D13FD615}.Release|x86.ActiveCfg = Release|Any CPU
+		{3004476F-DAFB-4EA8-9160-6F93D13FD615}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
 	EndGlobalSection
 EndGlobal
