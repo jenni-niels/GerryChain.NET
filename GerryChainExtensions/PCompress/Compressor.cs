@@ -54,6 +54,8 @@ namespace PCompress
                 process.StartInfo.UseShellExecute = false;
                 process.StartInfo.RedirectStandardInput = true;
                 process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.RedirectStandardError = true;
+                process.StartInfo.StandardInputEncoding = Encoding.UTF8;
                 process.StartInfo.StandardOutputEncoding = Encoding.UTF8;
                 process.StartInfo.Arguments = $"-c pcompress -e | xz -e -T {Threads}";
                 process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
@@ -67,14 +69,17 @@ namespace PCompress
                 process.Start();
                 process.BeginOutputReadLine();
 
-                StreamWriter writer = process.StandardInput;
+                StreamReader myStreamReader = process.StandardError;
+                StreamWriter writer = new StreamWriter($"{ Environment.CurrentDirectory}/test_output.txt"); //process.StandardInput;
                 
                 foreach (Partition p in MarkovChain)
                 {
-                    writer.WriteLine("[{0}]", string.Join(",", p.Assignments));
-                    //Console.WriteLine(p.SelfLoops);
+                    writer.WriteLine("[{0}]", string.Join(", ", p.Assignments));
+                    // Console.WriteLine(p.SelfLoops);
                 }
                 writer.Close();
+
+                Console.WriteLine(myStreamReader.ReadToEnd());
 
                 process.WaitForExit();
                 // Free resources associated with process.
