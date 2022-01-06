@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 //using System.Linq;
 using System.Text;
+using System.Threading;
 using GerryChain;
 
 namespace PCompress
@@ -49,42 +50,37 @@ namespace PCompress
             
             using (Process process = new Process())
             {
-                var outputStream = new StreamWriter($"{ Environment.CurrentDirectory}/{FileName}");
                 process.StartInfo.FileName = "zsh";
                 process.StartInfo.UseShellExecute = false;
                 process.StartInfo.RedirectStandardInput = true;
-                process.StartInfo.RedirectStandardOutput = true;
                 process.StartInfo.RedirectStandardError = true;
-                process.StartInfo.StandardInputEncoding = Encoding.UTF8;
-                process.StartInfo.StandardOutputEncoding = Encoding.UTF8;
-                process.StartInfo.Arguments = $"-c pcompress -e | xz -e -T {Threads}";
-                process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
+                process.StartInfo.StandardInputEncoding = Encoding.ASCII;
+                process.StartInfo.Arguments = $"-c \"pcompress -e | xz -e -T {Threads} > { Environment.CurrentDirectory}/{FileName} \" ";
+                process.StartInfo.EnvironmentVariables.Add("RUST_BACKTRACE", "full");
+
+                process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
                 {
                     if (!String.IsNullOrEmpty(e.Data))
                     {
-                        outputStream.WriteLine(e.Data);
+                        Console.WriteLine(e.Data);
                     }
                 });
 
                 process.Start();
-                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
 
-                StreamReader myStreamReader = process.StandardError;
-                StreamWriter writer = new StreamWriter($"{ Environment.CurrentDirectory}/test_output.txt"); //process.StandardInput;
-                
+                StreamWriter writer = process.StandardInput; 
+                writer.Flush();
                 foreach (Partition p in MarkovChain)
                 {
-                    writer.WriteLine("[{0}]", string.Join(", ", p.Assignments));
-                    // Console.WriteLine(p.SelfLoops);
+                    writer.Write("[{0}]\n", string.Join(", ", p.Assignments));
+                    writer.Flush();
                 }
                 writer.Close();
-
-                Console.WriteLine(myStreamReader.ReadToEnd());
 
                 process.WaitForExit();
                 // Free resources associated with process.
                 process.Close();
-                outputStream.Close();
             }
         }
     }
