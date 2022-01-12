@@ -38,7 +38,7 @@ namespace GerryChain
                 }
                 else if (timeInCycle < durationHot + durationCoolDown)
                 {
-                    beta = (double) step / durationCoolDown*betaMagnitude; //todo
+                    beta = (double) (timeInCycle - durationHot) / durationCoolDown*betaMagnitude; //todo
                 }
                 else
                 {

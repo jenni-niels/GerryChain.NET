@@ -109,8 +109,8 @@ namespace GerryChain
             }
             // var regionDivisionPenalties = new Dictionary<long, double>();
             var regionDivisionPenalties = edges.ToDictionary(e => DualGraph.EdgeHash(e),
-                                                             e => regions.Aggregate(0.0, (penalty, region) => penalty + region.Value.mappings[e.Source] == region.Value.mappings[e.Target]
-                                                                                                                        ? 0.0 : region.Value.penalty));
+                                                             e => regions.Aggregate(0.0, (penalty, region) => penalty + (region.Value.mappings[e.Source] == region.Value.mappings[e.Target]
+                                                                                                                        ? 0.0 : region.Value.penalty)));
 
 
 

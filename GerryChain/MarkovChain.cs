@@ -57,7 +57,8 @@ namespace GerryChain
         protected ProposalGenerator ChainType { get; init; }
 
         public Chain(Partition initialPartition, int numSteps, double epsilon, int randomSeed = 0,
-                     Func<Partition, int, double> accept = null, int degreeOfParallelism = 0, int batchSize = 32)
+                     Func<Partition, int, double> accept = null, int degreeOfParallelism = 0, 
+                     int batchSize = 32, HashSet<int> frozenDistricts = null)
         {
             InitialPartition = initialPartition;
             MaxSteps = numSteps;
@@ -70,7 +71,8 @@ namespace GerryChain
             else { MaxDegreeOfParallelism = degreeOfParallelism; }
 
             idealPopulation = InitialPartition.Graph.TotalPop / InitialPartition.NumDistricts;
-            ChainType = new CutEdgeReComProposalGenerator(idealPopulation, epsilon, initialPartition.Graph);
+            if (frozenDistricts is null) { frozenDistricts = new HashSet<int>(); }
+            ChainType = new CutEdgeReComProposalGenerator(idealPopulation, epsilon, initialPartition.Graph, frozenDistricts);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -207,6 +209,11 @@ namespace GerryChain
         protected double MinimumValidPopulation { get; init; }
         protected double MaximumValidPopulation { get; init; }
         protected DualGraph Graph { get; init; }
+        
+        /// <summary>
+        /// Districts to not mutate in the proposal.
+        /// </summary>
+        protected HashSet<int> FrozenDistricts { get; init; }
         public abstract Proposal SampleProposal(Partition currentPartition, int randomSeed);
         protected bool IsValidPopulation(double population, double totalPopulation)
         {
@@ -323,11 +330,12 @@ namespace GerryChain
 
     public class CutEdgeReComProposalGenerator : ReComProposalGenerator
     {
-        public CutEdgeReComProposalGenerator(double idealPopulation, double epsilon, DualGraph graph)
+        public CutEdgeReComProposalGenerator(double idealPopulation, double epsilon, DualGraph graph, HashSet<int> frozenDistricts)
         {
             MinimumValidPopulation = idealPopulation * (1 - epsilon);
             MaximumValidPopulation = idealPopulation * (1 + epsilon);
             Graph = graph;
+            FrozenDistricts = frozenDistricts;
         }
 
         /// <summary>
@@ -339,8 +347,13 @@ namespace GerryChain
         public override Proposal SampleProposal(Partition currentPartition, int randomSeed)
         {
             Random generatorRNG = new Random(randomSeed);
-            IUndirectedEdge<int> cutedge = currentPartition.CutEdges.ElementAt(generatorRNG.Next(currentPartition.CutEdges.Count()));
-            (int A, int B) districts = (currentPartition.Assignments[cutedge.Source], currentPartition.Assignments[cutedge.Target]);
+            (int A, int B) districts;
+            do
+            {
+                IUndirectedEdge<int> cutedge = currentPartition.CutEdges.ElementAt(generatorRNG.Next(currentPartition.CutEdges.Count()));
+                districts = (currentPartition.Assignments[cutedge.Source], currentPartition.Assignments[cutedge.Target]);
+            } while (FrozenDistricts.Contains(districts.A) || FrozenDistricts.Contains(districts.B));
+
             var subgraph = currentPartition.DistrictSubGraph(districts);
             
             UndirectedGraph<int, IUndirectedEdge<int>> mst = SampleMinimumSpanningTree(generatorRNG, subgraph);
