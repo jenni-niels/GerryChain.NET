@@ -49,6 +49,27 @@ namespace GerryChain
             return simulatedAnnealingAccept;
         }
 
+        public static Func<Partition, int, double> SimulatedAnnealingFactory(Partition initialPartition, string targetScoreName, Func<int, double> betaFunction, double betaMagnitude, bool minimize = true)
+        {
+            double initialScore = ((PlanWideScoreValue)initialPartition.Score(targetScoreName)).Value;
+            Func<Partition, int, double> simulatedAnnealingAccept = (partition, step) =>
+            {
+                double beta = betaFunction(step);
+                double partScore = ((PlanWideScoreValue)partition.Score(targetScoreName)).Value;
+                
+                if (partition.TryGetParentScore(targetScoreName, out ScoreValue parentScoreValue) is false)
+                {
+                    throw new ArgumentException("Parent should have been scored.");
+                }
+                double scoreDelta = step == 1 ? partScore - initialScore : partScore - ((PlanWideScoreValue)parentScoreValue).Value;
+                
+                if (minimize is false) { scoreDelta *= -1;}
+                
+                return Math.Exp(-beta * betaMagnitude * scoreDelta);
+            };
+            return simulatedAnnealingAccept;
+        }
+
         public static Func<Partition, int, double> MetropolisHastingsFactory(Partition initialPartition, string targetScoreName, double beta, bool minimize=true)
         {
             double initialScore = ((PlanWideScoreValue)initialPartition.Score(targetScoreName)).Value;
