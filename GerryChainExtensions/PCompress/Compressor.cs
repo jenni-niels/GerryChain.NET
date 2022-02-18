@@ -1,10 +1,8 @@
 using System;
-//using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-//using System.Linq;
 using System.Text;
-using System.Threading;
 using GerryChain;
 
 namespace PCompress
@@ -13,9 +11,9 @@ namespace PCompress
     {
         public Chain MarkovChain { get; init; }
         public string FileName { get; init; }
-
+        public string Shell { get; init; }
+        public (string, string)[] EnvironmentVariables { get; init; }
         public string Executable { get; init; }
-
         public int Threads { get; init; }
 
         /// <summary>
@@ -27,11 +25,14 @@ namespace PCompress
         /// <param name="threads"> How many threads to use in the recording. </param>
         /// <remarks> TODO:: Do I want to use logical cores as default (Environment.ProcessorCount)
         /// or someother system based measure of parallelizability? </remarks>
-        public Recorder(Chain chain, string fileName, string executable = "pcompress -e", int threads = 0)
+        public Recorder(Chain chain, string fileName, string shell = "zsh", (string, string)[] envVars = null,
+                        string executable = "pcompress -e", int threads = 0)
         {
             MarkovChain = chain;
             FileName = fileName;
             Executable = executable;
+            Shell = shell;
+            EnvironmentVariables = (envVars is null) ? Array.Empty<(string, string)>() : envVars;
 
             if (threads > 0)
             {
@@ -50,13 +51,18 @@ namespace PCompress
             
             using (Process process = new Process())
             {
-                process.StartInfo.FileName = "zsh";
+                process.StartInfo.FileName = Shell;
                 process.StartInfo.UseShellExecute = false;
                 process.StartInfo.RedirectStandardInput = true;
                 process.StartInfo.RedirectStandardError = true;
                 process.StartInfo.StandardInputEncoding = Encoding.ASCII;
                 process.StartInfo.Arguments = $"-c \"pcompress -e | xz -e -T {Threads} > { Environment.CurrentDirectory}/{FileName} \" ";
-                process.StartInfo.EnvironmentVariables.Add("RUST_BACKTRACE", "full");
+                process.StartInfo.Environment.Add("RUST_BACKTRACE", "full");
+
+                foreach ((string var, string value) in EnvironmentVariables)
+                {
+                    process.StartInfo.Environment.Add(var, value);
+                }
 
                 process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
                 {
@@ -85,21 +91,36 @@ namespace PCompress
         }
     }
 
-    // public class Replayer : IEnumerable<Partition>
-    // {
-    //     IEnumerator IEnumerable.GetEnumerator()
-    //     {
-    //         return GetEnumerator();
-    //     }
+    public class Replayer //: IEnumerable<Partition>
+    {
+        public string ChainFileName { get; init; }
+        public string Shell { get; init; }
+        public (string, string)[] EnvironmentVariables { get; init; }
+        public string Executable { get; init; }
+        public int Threads { get; init; }
+        public string Graph { get; init; }
 
-    //     public IEnumerator<Partition> GetEnumerator()
-    //     {
-    //         return new ChainReplayer(this);
-    //     }
+        public Replayer(string chainFilePath, string shell = "zsh", (string, string)[] envVars = null,
+                        string executable = "pcompress -e", int threads = 0)
+        {
+            ChainFileName = chainFilePath;
+            Executable = executable;
+            Shell = shell;
+            EnvironmentVariables = (envVars is null) ? Array.Empty<(string, string)>() : envVars;
 
-    //     public class ChainReplayer : IEnumerator<Partition>
-    //     {
+            if (threads > 0)
+            {
+                Threads = threads;
+            }
+            else
+            {
+                Threads = Environment.ProcessorCount;
+            }
+        }
 
-    //     }
-    // }
+        public IEnumerable<Partition> Replay()
+        {
+            return null;
+        }
+    }
 }

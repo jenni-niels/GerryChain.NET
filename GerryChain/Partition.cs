@@ -70,59 +70,11 @@ namespace GerryChain
                          IEnumerable<Score> scores, bool regionAware = false, (string, double)[] regionDivisionSpecs = null,
                          bool reorderNumbers = false, string geoidCol = null)
         {
-            if (regionAware && regionDivisionSpecs is null)
-            {
-                throw new ArgumentException("Cannot create region aware graph without region specification.");
-            }
-
-            double[] populations;
-            int[] assignments;
-            string[] geoids = null;
-            var regions = new Dictionary<string, (double penalty, int[] mappings)>();
-            IEnumerable<IUndirectedEdge<int>> edges;
-            var attributes = new Dictionary<string, double[]>();
-
-            using (StreamReader reader = File.OpenText(jsonFilePath))
-            {
-                JObject o = (JObject)JToken.ReadFrom(new JsonTextReader(reader));
-                populations = (from n in o["nodes"] select (double)n[populationColumn]).ToArray();
-                assignments = (from n in o["nodes"] select (int)n[assignmentColumn]).ToArray();
-
-                foreach (string c in columnsToTrack)
-                {
-                    attributes[c] = (from n in o["nodes"] select (double)n[c]).ToArray();
-                }
-                if (regionAware)
-                {
-                    foreach ((string regionColumn, double regionDivisionPenalty) in regionDivisionSpecs)
-                    {
-                        var regionAssignments = (from n in o["nodes"] select (int)n[regionColumn]).ToArray();
-                        regions[regionColumn] = (penalty: regionDivisionPenalty, mappings: regionAssignments);
-                    }
-                }
-                if (geoidCol is not null)
-                {
-                    geoids = (from n in o["nodes"] select (string)n[geoidCol]).ToArray();
-                }
-
-                edges = o["adjacency"].SelectMany((x, i) => x.Select(e => (IUndirectedEdge<int>) new SUndirectedEdge<int>(i, (int)e["id"])));
-            }
-            // var regionDivisionPenalties = new Dictionary<long, double>();
-            var regionDivisionPenalties = edges.ToDictionary(e => DualGraph.EdgeHash(e),
-                                                             e => regions.Aggregate(0.0, (penalty, region) => penalty + (region.Value.mappings[e.Source] == region.Value.mappings[e.Target]
-                                                                                                                        ? 0.0 : region.Value.penalty)));
-
-
-
-            Graph = new DualGraph
-            {
-                Populations = populations,
-                TotalPop = populations.Sum(),
-                Graph = edges.ToUndirectedGraph<int, IUndirectedEdge<int>>(),
-                Attributes = attributes.ToImmutableDictionary(),
-                RegionDivisionPenalties = regionDivisionPenalties,
-                Geoids = geoids
-        };
+            var g = GraphParsers.LoadGraphFromJson(jsonFilePath, populationColumn, columnsToTrack, 
+                                                    assignmentColumn, regionAware, regionDivisionSpecs,
+                                                    geoidCol);
+            Graph = g.graph;
+            int[] assignments = g.assignments;
             HasParent = false;
             /// Assignment column must be 0 or 1 indexed.
             if (reorderNumbers)
