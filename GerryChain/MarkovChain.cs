@@ -160,8 +160,8 @@ namespace GerryChain
                 else
                 {
                     int randSeed = rng.Next();
-                    ParallelQuery<int> seeds = chain.useDefaultParallelism ? Enumerable.Range(0, chain.BatchSize).AsParallel()
-                                                                           : Enumerable.Range(0, chain.BatchSize).AsParallel()
+                    ParallelQuery<int> seeds = chain.useDefaultParallelism ? Enumerable.Range(0, chain.BatchSize).AsParallel().AsOrdered()
+                                                                           : Enumerable.Range(0, chain.BatchSize).AsParallel().AsOrdered()
                                                                                        .WithDegreeOfParallelism(chain.MaxDegreeOfParallelism);
 
                     ParallelQuery<Proposal> proposals = seeds.Select(i => chain.ChainType.SampleProposal(currentPartition, randSeed + i));
