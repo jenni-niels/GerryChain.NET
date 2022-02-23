@@ -3,7 +3,18 @@ using System.Collections.Generic;
 
 namespace GerryChain
 {
-    public class ShortBurstOptimizer //: IEnumerable<Partition>
+    public interface ISingleMetricOptimizer
+    {
+        public string TargetScoreName { get; init; }
+        public bool Maximize { get; init; }
+        public Partition InitialPartition { get; init; }
+        public Partition BestPartition { get; }
+        public ScoreValue BestScore { get; }
+        public Func<ScoreValue, ScoreValue, bool> BetterThanEqComparator { get; init; }
+        public IEnumerable<Partition> Run(int randomSeed);
+    }
+    
+    public class ShortBurstOptimizer : ISingleMetricOptimizer
     {
         public int BurstLength { get; init; }
         public int NumberOfBursts { get; init; }
@@ -12,7 +23,7 @@ namespace GerryChain
         public Partition InitialPartition { get; init; }
         public Partition BestPartition { get; private set; }
         public ScoreValue BestScore { get; private set; }
-        private Func<ScoreValue, ScoreValue, bool> BetterThanEqComparator { get; init; }
+        public Func<ScoreValue, ScoreValue, bool> BetterThanEqComparator { get; init; }
 
         // Markov Chain settings
         public int DegreeOfParallelism { get; init; }
@@ -67,7 +78,7 @@ namespace GerryChain
             if (Maximize) { return partScore.Value >= ((PlanWideScoreValue)BestScore).Value; }
             else { return partScore.Value <= ((PlanWideScoreValue)BestScore).Value; }
         }
-        
+
         /// <summary>
         /// 
         /// </summary>
