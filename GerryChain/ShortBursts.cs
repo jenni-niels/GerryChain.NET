@@ -9,12 +9,12 @@ namespace GerryChain
         public int NumberOfBursts { get; init; }
         public string TargetScoreName { get; init; }
         public bool Maximize { get; init; }
+        public Partition InitialPartition { get; init; }
         public Partition BestPartition { get; private set; }
         public ScoreValue BestScore { get; private set; }
         private Func<ScoreValue, ScoreValue, bool> BetterThanEqComparator { get; init; }
 
         // Markov Chain settings
-        public int RngSeed { get; init; }
         public int DegreeOfParallelism { get; init; }
         public int BatchSize { get; init; }
         public Func<Partition, int, double> AcceptanceFunction { get; init; }
@@ -30,7 +30,6 @@ namespace GerryChain
         /// <param name="numberOfBursts"></param>
         /// <param name="targetScoreName"></param>
         /// <param name="epsilon"></param>
-        /// <param name="randomSeed"></param>
         /// <param name="accept"></param>
         /// <param name="degreeOfParallelism"></param>
         /// <param name="batchSize"></param>
@@ -44,21 +43,19 @@ namespace GerryChain
         /// or minimize.</param>
         
         public ShortBurstOptimizer(Partition initialPartition, int burstLength, int numberOfBursts, string targetScoreName,
-                                   double epsilon, int randomSeed = 0, Func<Partition, int, double> accept = null, 
-                                   int degreeOfParallelism = 0, int batchSize = 32, HashSet<int> frozenDistricts = null,
-                                   Func<ScoreValue, ScoreValue, bool> isBetterEqThan = null, bool maximize = true)
+                                   double epsilon, Func<Partition, int, double> accept = null, int degreeOfParallelism = 0, 
+                                   int batchSize = 32, HashSet<int> frozenDistricts = null, bool maximize = true,
+                                   Func<ScoreValue, ScoreValue, bool> isBetterEqThan = null)
         {
             BurstLength = burstLength;
             NumberOfBursts = numberOfBursts;
-            BestPartition = initialPartition;
+            InitialPartition = initialPartition;
             TargetScoreName = targetScoreName;
-            BestScore = BestPartition.Score(TargetScoreName);
             Maximize = maximize;
             BetterThanEqComparator = (isBetterEqThan is null) ? (scoreVal, _) => IsImprovementPlanWideScore((PlanWideScoreValue) scoreVal)
                                                                : isBetterEqThan;
 
             EpsilonBalance = epsilon;
-            RngSeed = randomSeed;
             BatchSize = batchSize;
             AcceptanceFunction = accept;
             DegreeOfParallelism = degreeOfParallelism;
@@ -70,12 +67,20 @@ namespace GerryChain
             if (Maximize) { return partScore.Value >= ((PlanWideScoreValue)BestScore).Value; }
             else { return partScore.Value <= ((PlanWideScoreValue)BestScore).Value; }
         }
-        public IEnumerable<Partition> Run()
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="randomSeed"></param>
+        /// <returns></returns>
+        public IEnumerable<Partition> Run(int randomSeed = 0)
         {
+            BestPartition = InitialPartition;
+            BestScore = BestPartition.Score(TargetScoreName);
             for (int i = 0; i < NumberOfBursts; i++)
             {
-                int adjustedSeed = RngSeed + i;
-                Chain burstChain = new Chain(BestPartition, BurstLength, EpsilonBalance, randomSeed: adjustedSeed,
+                int burstSeed = randomSeed + i;
+                Chain burstChain = new Chain(BestPartition, BurstLength, EpsilonBalance, randomSeed: burstSeed,
                                              accept: AcceptanceFunction, degreeOfParallelism: DegreeOfParallelism,
                                              batchSize: BatchSize, frozenDistricts: FrozenDistricts);
                 foreach (Partition part in burstChain)
