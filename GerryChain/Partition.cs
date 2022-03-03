@@ -43,17 +43,28 @@ namespace GerryChain
         /// </summary>
         /// <param name="graph"> Underlying Dual Graph </param>
         /// <param name="assignment"> Partition assignment on nodes of graph. </param>
-        public Partition(DualGraph graph, int[] assignment, IEnumerable<Score> Scores)
+        public Partition(DualGraph graph, int[] assignment, IEnumerable<Score> scores = null, Partition parent = null)
         {
-            HasParent = false;
             Graph = graph;
-            ScoreFunctions = Scores.ToDictionary(s => s.Name);
             ScoreValues = new Dictionary<string, ScoreValue>();
-            ParentScoreValues = new Dictionary<string, ScoreValue>();
             CutEdges = Graph.Graph.Edges.Where(e => Assignments[e.Source] != Assignments[e.Target]);
             bool oneIndexed = assignment.Min() == 1;
             Assignments = oneIndexed ? assignment.Select(d => d - 1).ToArray() : assignment;
-            NumDistricts = oneIndexed ? assignment.Max() : assignment.Max() + 1;
+            HasParent = parent is not null;
+            ParentScoreValues = new Dictionary<string, ScoreValue>(); //move this
+
+            if (parent is null)
+            {
+                ScoreFunctions = scores.ToDictionary(s => s.Name);
+                NumDistricts = oneIndexed ? assignment.Max() : assignment.Max() + 1;
+            }
+            else
+            {
+                ParentAssignments = parent.Assignments;
+                // ParentScoreValues = parent.ScoreValues;
+                ScoreFunctions = parent.ScoreFunctions;
+                NumDistricts = parent.NumDistricts;
+            }
         }
 
         /// <summary>

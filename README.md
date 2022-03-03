@@ -3,6 +3,15 @@
 A .NET implementation of the ReCom Markov chain for redistricting.  Development goals are fast heuristic optimization 
 
 ## TODO::
+
+* Implement flips Proposal version of PCompress.Replayer
+
+* Create example scripts for:
+    * Optimization
+    * PCompress
+    * Displacement
+    * VRA Scores
+
 * ~~Lazy evaluated score on Partition objects~~
 * ~~Decision on using Quikgraph or "homebrewed" immutable graph representation?~~ - Using Quikgraph
 * ~~Add grid graph toy example~~
@@ -25,7 +34,7 @@ A .NET implementation of the ReCom Markov chain for redistricting.  Development 
 
 * Add Optimization chain class
     * ~~Objective function representation~~.
-    * Short Bursts
+    * ~~Short Bursts~~
     * ~~Modified Hill Climbing~~
 
 * Create ReCom/Chain interface and restructure proposal generation to implement with support for multiple ReCom variants.

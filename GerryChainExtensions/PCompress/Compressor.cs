@@ -2,8 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using GerryChain;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace PCompress
 {
@@ -98,11 +101,15 @@ namespace PCompress
         public (string, string)[] EnvironmentVariables { get; init; }
         public string Executable { get; init; }
         public int Threads { get; init; }
-        public string Graph { get; init; }
+        public DualGraph Graph { get; init; }
+        public IEnumerable<Score> Scores { get; init; }
 
-        public Replayer(string chainFilePath, string shell = "zsh", (string, string)[] envVars = null,
+        public Replayer(DualGraph graph, IEnumerable<Score> scores, string chainFilePath,
+                        string shell = "zsh", (string, string)[] envVars = null,
                         string executable = "pcompress -e", int threads = 0)
         {
+            Graph = graph;
+            Scores = scores;
             ChainFileName = chainFilePath;
             Executable = executable;
             Shell = shell;
@@ -120,7 +127,56 @@ namespace PCompress
 
         public IEnumerable<Partition> Replay()
         {
-            return null;
+            var executingAssembly = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            var executingAssemblyDir = Path.GetDirectoryName(executingAssembly);
+            
+            using (Process process = new Process())
+            {
+                process.StartInfo.FileName = Shell;
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.RedirectStandardInput = true;
+                process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.RedirectStandardError = true;
+                process.StartInfo.StandardInputEncoding = Encoding.ASCII;
+                process.StartInfo.Arguments = $"-c \" cat { Environment.CurrentDirectory}/{ChainFileName} | unxz -T {Threads} | pcompress -d  \" ";
+                process.StartInfo.Environment.Add("RUST_BACKTRACE", "full");
+
+                foreach ((string var, string value) in EnvironmentVariables)
+                {
+                    process.StartInfo.Environment.Add(var, value);
+                }
+
+                process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
+                {
+                    if (!String.IsNullOrEmpty(e.Data))
+                    {
+                        Console.WriteLine(e.Data);
+                    }
+                });
+
+                process.Start();
+                process.BeginErrorReadLine();
+
+                StreamReader reader = process.StandardOutput;
+
+                Partition prevPartition = null;
+
+                while (!reader.EndOfStream)
+                {
+                    string assignmentString = reader.ReadLine();
+                    JArray assignmentParsed = (JArray)JToken.Parse(assignmentString);
+                    int[] assignment = assignmentParsed.Select(x => (int) x).ToArray();
+                    Partition curPartition = new Partition(Graph, assignment, Scores, parent: prevPartition);
+                    prevPartition = curPartition;
+                    yield return curPartition;
+                }
+
+                reader.Close();
+
+                process.WaitForExit();
+                // Free resources associated with process.
+                process.Close();
+            }
         }
     }
 }
