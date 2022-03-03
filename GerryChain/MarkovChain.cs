@@ -16,7 +16,7 @@ namespace GerryChain
     /// <param name="DistrictsAffected"> The districts that were re-combined </param>
     /// <param name="Flips">The new district assignment </param>
     /// <param name="NewDistrictPops"> The population of the new districts. </param>
-    public record Proposal(Partition Partition, (int A, int B) DistrictsAffected, Dictionary<int, int[]> Flips, (double, double) NewDistrictPops);
+    public record Proposal(Partition Partition, (int A, int B) DistrictsAffected, Dictionary<int, int[]> Flips, (double, double)? NewDistrictPops);
     
     /// <summary>
     /// Record encoding the information of a ReCom proposal, without the partion reference.
@@ -56,6 +56,21 @@ namespace GerryChain
 
         protected ProposalGenerator ChainType { get; init; }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="initialPartition"> Seed partition </param>
+        /// <param name="numSteps"></param>
+        /// <param name="epsilon"> Parameter setting how tightly to balance population. Districts are
+        /// required to have population between (1 - \epsilon) * ideal population and 
+        /// (1 + \epsilon) * ideal population. </param>
+        /// <param name="randomSeed"> Value to seed the random number generator with. </param>
+        /// <param name="accept"> The acceptance function to use in the Markov Chain. </param>
+        /// <param name="degreeOfParallelism"> Maximum number of proposals generation tasks to execute
+        /// in parallel. If 0, the default system behavior is used. </param>
+        /// <param name="batchSize"> How many proposals to try to generate at each step. </param>
+        /// <param name="frozenDistricts"> Set of district ids to "freeze" and not allow to change
+        /// in the course of the chain. </param>
         public Chain(Partition initialPartition, int numSteps, double epsilon, int randomSeed = 0,
                      Func<Partition, int, double> accept = null, int degreeOfParallelism = 0, 
                      int batchSize = 32, HashSet<int> frozenDistricts = null)
@@ -233,8 +248,8 @@ namespace GerryChain
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="generatorRNG"></param>
-        /// <param name="subgraph"></param>
+        /// <param name="generatorRNG"> The random number generator to use. </param>
+        /// <param name="subgraph"> The subgraph to sample the minimum spaning tree for. </param>
         /// <returns></returns>
         protected UndirectedGraph<int, IUndirectedEdge<int>> SampleMinimumSpanningTree(Random generatorRNG, UndirectedGraph<int, IUndirectedEdge<int>> subgraph)
         {
