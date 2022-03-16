@@ -131,7 +131,8 @@ namespace GerryChain
                 }
             }
             CutEdges = Graph.Graph.Edges.Where(e => Assignments[e.Source] != Assignments[e.Target]);
-            ProposalSummary = new ProposalSummary(proposal.DistrictsAffected, proposal.Flips, proposal.NewDistrictPops);
+            var districtPops = proposal.NewDistrictPops.HasValue ? proposal.NewDistrictPops.Value : (0,0);
+            ProposalSummary = new ProposalSummary(proposal.DistrictsAffected, proposal.Flips, districtPops);
         }
 
         public Partition TakeSelfLoop()
