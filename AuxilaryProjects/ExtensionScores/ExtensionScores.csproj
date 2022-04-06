@@ -12,13 +12,9 @@
     <Reference Include="Gurobi91.NET">
       <HintPath>/Library/gurobi912/mac64/lib/gurobi91.netstandard20.dll</HintPath>
     </Reference>
-    <!-- <Reference Include="VRAEffectiveness">
-      <HintPath>VRAEffectiveness/bin/Release/net5.0/VRAEffectiveness.dll</HintPath>
-    </Reference> -->
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\GerryChain\GerryChain.csproj" />
-    <ProjectReference Include="..\VRAEffectiveness\VRAEffectiveness.fsproj" />
   </ItemGroup>
 
 </Project>

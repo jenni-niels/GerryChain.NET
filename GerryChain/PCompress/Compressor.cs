@@ -94,7 +94,7 @@ namespace PCompress
         }
     }
 
-    public class Replayer //: IEnumerable<Partition>
+    public class Replayer
     {
         public string ChainFileName { get; init; }
         public string Shell { get; init; }
@@ -125,7 +125,7 @@ namespace PCompress
             }
         }
 
-        public IEnumerable<Partition> Replay()
+        public IEnumerable<Partition> Replay(bool flips = true)
         {
             var executingAssembly = System.Reflection.Assembly.GetExecutingAssembly().Location;
             var executingAssemblyDir = Path.GetDirectoryName(executingAssembly);
@@ -163,11 +163,37 @@ namespace PCompress
 
                 while (!reader.EndOfStream)
                 {
+                    Partition curPartition;
                     string assignmentString = reader.ReadLine();
                     JArray assignmentParsed = (JArray)JToken.Parse(assignmentString);
-                    int[] assignment = assignmentParsed.Select(x => (int) x).ToArray();
-                    Partition curPartition = new Partition(Graph, assignment, Scores, parent: prevPartition);
+
+                    if (flips && prevPartition is not null)
+                    {
+                        Dictionary<int, int[]> nodeFlips = new Dictionary<int, int[]>();
+                        int district = 0;
+                        foreach (JArray districtFlips in assignmentParsed)
+                        {
+                            if (districtFlips.Count > 0)
+                            {
+                                nodeFlips[district] = districtFlips.Select(x => (int) x).ToArray();
+                            }
+                            district++;
+                        }
+                        var districtsChanged = nodeFlips.Keys;
+                        if (districtsChanged.Count > 2)
+                        {
+                            throw new NotSupportedException("Chain contains step where more that two districts change.  Try running again with flips = false.");
+                        }
+                        Proposal proposal = new Proposal(prevPartition, (districtsChanged.First(), districtsChanged.Last()), nodeFlips, null);
+                        curPartition = new Partition(proposal);
+                    }
+                    else
+                    {
+                        int[] assignment = assignmentParsed.Select(x => (int) x).ToArray();
+                        curPartition = new Partition(Graph, assignment, Scores);
+                    }
                     prevPartition = curPartition;
+                    
                     yield return curPartition;
                 }
 

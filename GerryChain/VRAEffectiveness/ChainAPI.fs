@@ -13,8 +13,8 @@ type VRAAPI(state: string, alignmentType : AllignmentType, geoidCol : string) =
     let PathCombine path path' path'' = System.IO.Path.Combine(path, path', path'')
 
     let StateSuccessFunction: Map<string, SuccessFunction<string>> = Map.ofArray [|"texas", CoCCarriesElectTX; 
-                                                                                "louisiana", CoCCarriesElectLA;
-                                                                                "massachusetts", CoCCarriesElectPlurality|]
+                                                                                   "louisiana", CoCCarriesElectLA;
+                                                                                   "massachusetts", CoCCarriesElectPlurality|]
 
     let StateAlignmentOptions: Map<AllignmentType, AlignmentFunction<string>> = Map.ofArray [|AllignmentType.None, EmptyAlignment; AllignmentType.CVAP, AlignmentCVAP|]
 
