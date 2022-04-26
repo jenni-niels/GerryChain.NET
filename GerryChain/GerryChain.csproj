@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>net5.0;net6.0</TargetFrameworks>
     <!-- <GeneratePackageOnBuild>true</GeneratePackageOnBuild> -->
-    <PackageVersion>1.0.2-1</PackageVersion>
+    <PackageVersion>1.0.3</PackageVersion>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <Authors>JN Matthews</Authors>
     <PackageTags>Redistricting Gerrymandering MCMC ReCom</PackageTags>
