@@ -73,7 +73,7 @@ namespace GerryChain
         /// in the course of the chain. </param>
         public Chain(Partition initialPartition, int numSteps, double epsilon, int randomSeed = 0,
                      Func<Partition, int, double> accept = null, int degreeOfParallelism = 0, 
-                     int batchSize = 32, HashSet<int> frozenDistricts = null)
+                     int batchSize = 32, HashSet<int> frozenDistricts = null, double? populationTarget = null)
         {
             InitialPartition = initialPartition;
             MaxSteps = numSteps;
@@ -85,7 +85,19 @@ namespace GerryChain
             if (degreeOfParallelism < 1) { useDefaultParallelism = true; }
             else { MaxDegreeOfParallelism = degreeOfParallelism; }
 
-            idealPopulation = InitialPartition.Graph.TotalPop / InitialPartition.NumDistricts;
+            if (populationTarget is double populationTargetValue) { idealPopulation = populationTargetValue; }
+            else { idealPopulation = InitialPartition.Graph.TotalPop / InitialPartition.NumDistricts; }
+
+            if (InitialPartition.Graph.TotalPop > idealPopulation * InitialPartition.NumDistricts * (1 + epsilon) ||
+                InitialPartition.Graph.TotalPop < idealPopulation * InitialPartition.NumDistricts * (1 - epsilon))
+            {
+                throw new ArgumentOutOfRangeException("populationTarget", populationTarget,
+                                                      "The target population must be achievable within the range of the initial partition's: "
+                                                      + $"total population ({InitialPartition.Graph.TotalPop}), "
+                                                      + $"and number of districts ({InitialPartition.NumDistricts}) "
+                                                      + $"with respect to the passed epsilon ({epsilon}).");
+            }
+
             if (frozenDistricts is null) { frozenDistricts = new HashSet<int>(); }
             ChainType = new CutEdgeReComProposalGenerator(idealPopulation, epsilon, initialPartition.Graph, frozenDistricts);
         }

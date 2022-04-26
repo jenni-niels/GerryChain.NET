@@ -37,6 +37,7 @@ namespace GerryChain
         public int BatchSize { get; init; }
         public Func<Partition, int, double> AcceptanceFunction { get; init; }
         public double EpsilonBalance { get; init; }
+        public double? PopulationTarget { get; init; }
         public HashSet<int> FrozenDistricts { get; init; }
 
 
@@ -67,8 +68,8 @@ namespace GerryChain
         
         public ShortBurstOptimizer(Partition initialPartition, int burstLength, int numberOfBursts, string targetScoreName,
                                    double epsilon, Func<Partition, int, double> accept = null, int degreeOfParallelism = 0, 
-                                   int batchSize = 32, HashSet<int> frozenDistricts = null, bool maximize = true,
-                                   Func<ScoreValue, ScoreValue, bool> isBetterEqThan = null)
+                                   int batchSize = 32, HashSet<int> frozenDistricts = null, double? populationTarget = null,
+                                   bool maximize = true, Func<ScoreValue, ScoreValue, bool> isBetterEqThan = null)
         {
             BurstLength = burstLength;
             NumberOfBursts = numberOfBursts;
@@ -79,6 +80,7 @@ namespace GerryChain
                                                                : isBetterEqThan;
 
             EpsilonBalance = epsilon;
+            PopulationTarget = populationTarget;
             BatchSize = batchSize;
             AcceptanceFunction = accept;
             DegreeOfParallelism = degreeOfParallelism;
@@ -105,7 +107,8 @@ namespace GerryChain
                 int burstSeed = randomSeed + i;
                 Chain burstChain = new Chain(BestPartition, BurstLength, EpsilonBalance, randomSeed: burstSeed,
                                              accept: AcceptanceFunction, degreeOfParallelism: DegreeOfParallelism,
-                                             batchSize: BatchSize, frozenDistricts: FrozenDistricts);
+                                             batchSize: BatchSize, frozenDistricts: FrozenDistricts, 
+                                             populationTarget: PopulationTarget);
                 foreach (Partition part in burstChain)
                 {
                     yield return part;
