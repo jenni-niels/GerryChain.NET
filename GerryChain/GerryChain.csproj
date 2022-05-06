@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>net5.0;net6.0</TargetFrameworks>
     <!-- <GeneratePackageOnBuild>true</GeneratePackageOnBuild> -->
-    <PackageVersion>1.0.3</PackageVersion>
+    <PackageVersion>1.0.4</PackageVersion>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <Authors>JN Matthews</Authors>
     <PackageTags>Redistricting Gerrymandering MCMC ReCom</PackageTags>
@@ -14,6 +14,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="QuikGraph" Version="2.3.0" />
     <PackageReference Include="System.Linq.Parallel" Version="4.3.0" />
+    <PackageReference Include="Google.OrTools" Version="9.3.10497" />
   </ItemGroup>
 
   <ItemGroup>

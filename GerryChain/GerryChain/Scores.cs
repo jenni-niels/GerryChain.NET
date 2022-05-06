@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Google.OrTools.Graph;
 
 namespace GerryChain
 {
@@ -176,6 +177,101 @@ namespace GerryChain
             };
             scores.Add(new Score(responsiveProportionalityName, distance));
             return scores;
+        }
+
+        // Misc Scores
+
+        /// <summary>
+        /// Computes the cost matrix of population overlap between all pairs of districts in the old
+        /// and new plan.
+        /// </summary>
+        /// <param name="numOldDistricts"> The number of districts in the old plan. </param>
+        /// <param name="oldAssignments"> The node assignments for the old plan. </param>
+        /// <param name="newPlan"> The Partition object representing the old plan </param>
+        /// <returns> populationOverlapMatrix: a long[,] with dimensions nxm where n is the number 
+        /// of districts in the old plan and m is the number of districts in the new plan. 
+        /// populationOverlapMatrix[i,j] is the number of people who lived in district i under the 
+        /// old plan and will live in district j under th new plan. </returns>
+        public static long[,] DistrictPopulationOverlapMatrix(int numOldDistricts, int[] oldAssignments,
+                                                              Partition newPlan)
+        {
+            double[] nodePopulations = newPlan.Graph.Populations;
+            double[,] populationOverlapMatrixRaw = new double[numOldDistricts, newPlan.NumDistricts];
+            long[,] populationOverlapMatrix = new long[numOldDistricts, newPlan.NumDistricts];
+
+            for (int i = 0; i < oldAssignments.Length; i++)
+            {
+                populationOverlapMatrixRaw[oldAssignments[i], newPlan.Assignments[i]] += nodePopulations[i];
+            }
+
+            for (int i = 0; i < numOldDistricts; i++)
+            {
+                for (int j = 0; j < newPlan.NumDistricts; j++)
+                {
+                    populationOverlapMatrix[i, j] = Convert.ToInt64(Math.Round(populationOverlapMatrixRaw[i, j]));
+                }
+            }
+            return populationOverlapMatrix;
+        }
+
+        /// <summary>
+        /// Factory method for the minimal population displacement between a plan and the passed
+        /// reference plan.
+        /// 
+        /// The best district assignment between the 2 plans is computed by coverting this assignment
+        /// problem to a minimum cost flow graph problem, via the
+        /// <a href="https://en.wikipedia.org/wiki/Minimum-cost_flow_problem#Application">reduction
+        /// between minimum weight bipartite matching and minimum cost flow</a>.  The optimal solution
+        /// is then found using the MinCostFlow solver from Google OR-Tools.
+        /// </summary>
+        /// <param name="name"> The name of the score. </param>
+        /// <param name="referencePlan"> Partition for which to compute population displacement
+        /// against. </param>
+        /// <returns> Score with Name `name` and Func to compute minimum population displacement. </returns>
+        public static Score PopulationDisplacementFactory(string name, Partition referencePlan)
+        {
+            int numOldDistricts = referencePlan.NumDistricts;
+            int[] oldAssignments = referencePlan.Assignments;
+
+            Func<Partition, PlanWideScoreValue> displacement = partition =>
+            {
+                int numNewDistricts = partition.NumDistricts;
+                int numMatches = Math.Min(numOldDistricts, numNewDistricts);
+                long[,] populationOverlapMatrix = DistrictPopulationOverlapMatrix(numOldDistricts, oldAssignments, partition);
+
+                int[] startNodes = Enumerable.Repeat(0, numOldDistricts)
+                                             .Concat(Enumerable.Range(1, numOldDistricts).SelectMany(x => Enumerable.Repeat(x, numNewDistricts)))
+                                             .Concat(Enumerable.Range(numOldDistricts + 1, numNewDistricts)).ToArray();
+
+                int[] endNodes = Enumerable.Range(1, numOldDistricts)
+                                           .Concat(Enumerable.Repeat(0, numOldDistricts).SelectMany(x => Enumerable.Range(numOldDistricts + 1, numNewDistricts)))
+                                           .Concat(Enumerable.Repeat(numOldDistricts + numNewDistricts + 1, numNewDistricts)).ToArray();
+
+                long[] costs = Enumerable.Repeat<long>(0, numOldDistricts)
+                                         .Concat(Enumerable.Range(0, numOldDistricts).SelectMany(x => Enumerable.Range(0, numNewDistricts)
+                                                                                                                .Select(y => populationOverlapMatrix[x, y])))
+                                         .Concat(Enumerable.Repeat<long>(0, numNewDistricts)).ToArray();
+
+                int[] supplies = Enumerable.Repeat(0, numOldDistricts + numNewDistricts).Prepend(numMatches).Append(-numMatches).ToArray();
+
+                MinCostFlow minCostFlow = new MinCostFlow();
+                // Add each arc.
+                for (int i = 0; i < startNodes.Length; i++)
+                {
+                    minCostFlow.AddArcWithCapacityAndUnitCost(startNodes[i], endNodes[i], 1, -costs[i]);
+                }
+                // Add node supplies.
+                for (int i = 0; i < supplies.Length; i++)
+                {
+                    minCostFlow.SetNodeSupply(i, supplies[i]);
+                }
+                MinCostFlow.Status status = minCostFlow.Solve();
+
+                double populationOverlap = -1 * minCostFlow.OptimalCost();
+                double minPopulationDisplaced = partition.Graph.TotalPop - populationOverlap;
+                return new PlanWideScoreValue(minPopulationDisplaced);
+            };
+            return new Score(name,  displacement);
         }
     }
 }
